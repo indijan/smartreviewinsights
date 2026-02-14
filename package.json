@@ -6,19 +6,50 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "tsx prisma/seed.ts",
+    "import:wxr": "tsx scripts/import-wxr.ts",
+    "audit:slugs": "tsx scripts/slug-audit.ts",
+    "link:amazon": "tsx scripts/link-amazon-offers.ts",
+    "audit:missing-products": "tsx scripts/audit-missing-products.ts",
+    "fallback:offers": "tsx scripts/fallback-missing-offers.ts",
+    "fallback:hu": "tsx scripts/fallback-hu-offers.ts",
+    "quality:top50": "tsx scripts/quality-top50.ts",
+    "rollback:quality": "tsx scripts/rollback-quality-batch.ts",
+    "bootstrap:partners": "tsx scripts/bootstrap-partners.ts",
+    "map:offers": "tsx scripts/map-offers-to-partners.ts",
+    "ingest:offers": "tsx scripts/ingest-offers-from-json.ts",
+    "sync:amazon": "tsx scripts/amazon-sync.ts",
+    "refresh:published:offers": "tsx scripts/refresh-published-offers.ts",
+    "sync:wxr:categories": "tsx scripts/sync-wxr-categories.ts",
+    "bootstrap:amazon:niches": "tsx scripts/bootstrap-amazon-niches.ts"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.3.0",
+    "@prisma/client": "^7.3.0",
+    "marked": "^17.0.1",
     "next": "16.1.6",
+    "pg": "^8.18.0",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "turndown": "^7.2.2",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/pg": "^8.16.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/turndown": "^5.0.6",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "prisma": "^7.3.0",
+    "tsx": "^4.21.0",
     "typescript": "^5"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }

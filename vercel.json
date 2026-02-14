@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/autopost",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/monthly-price-backcheck",
+      "schedule": "15 3 1 * *"
+    }
+  ]
+}

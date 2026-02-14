@@ -1,0 +1,286 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Page {
+  id           String     @id @default(cuid())
+  slug         String     @unique
+  type         PageType
+  title        String
+  excerpt      String?
+  contentMd    String
+  heroImageUrl String?
+  status       PageStatus @default(PUBLISHED)
+  publishedAt  DateTime?
+  updatedAt    DateTime   @updatedAt
+  createdAt    DateTime   @default(now())
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
+
+  tags   PageTag[]
+  clicks ClickEvent[]
+
+  @@index([status, publishedAt])
+}
+
+model Product {
+  id            String   @id @default(cuid())
+  canonicalName String
+  category      String
+  attributes    Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  pages  Page[]
+  offers Offer[]
+}
+
+model Offer {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  source       OfferSource
+  externalId   String?
+  title        String?
+  price        Decimal? @db.Decimal(12, 2)
+  currency     String   @default("USD")
+  availability String?
+  affiliateUrl String
+  partnerId    String?
+  partner      Partner? @relation(fields: [partnerId], references: [id])
+  imageUrl     String?
+  lastUpdated  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  priceHistory PriceHistory[]
+  clicks       ClickEvent[]
+  ingests      OfferIngestEvent[]
+
+  @@index([source, lastUpdated])
+  @@index([partnerId])
+  @@unique([source, externalId])
+}
+
+model PriceHistory {
+  id       String   @id @default(cuid())
+  offerId  String
+  offer    Offer    @relation(fields: [offerId], references: [id])
+  price    Decimal  @db.Decimal(12, 2)
+  currency String   @default("USD")
+  seenAt   DateTime @default(now())
+
+  @@index([offerId, seenAt])
+}
+
+model ClickEvent {
+  id        String   @id @default(cuid())
+  pageId    String?
+  offerId   String?
+  source    OfferSource
+  ref       String?
+  userAgent String?
+  ipHash    String?
+  createdAt DateTime @default(now())
+
+  page  Page?  @relation(fields: [pageId], references: [id])
+  offer Offer? @relation(fields: [offerId], references: [id])
+
+  @@index([createdAt])
+}
+
+model Tag {
+  id    String  @id @default(cuid())
+  name  String  @unique
+  pages PageTag[]
+}
+
+model Partner {
+  id         String   @id @default(cuid())
+  name       String
+  source     OfferSource
+  websiteUrl String?
+  hasApi     Boolean  @default(false)
+  isEnabled  Boolean  @default(true)
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  accounts AffiliateAccount[]
+  offers   Offer[]
+  ingests  OfferIngestEvent[]
+
+  @@unique([name, source])
+}
+
+model AffiliateAccount {
+  id              String   @id @default(cuid())
+  partnerId       String
+  partner         Partner  @relation(fields: [partnerId], references: [id])
+  label           String
+  trackingId      String?
+  deepLinkPattern String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([partnerId, isActive])
+}
+
+model OfferIngestEvent {
+  id         String      @id @default(cuid())
+  offerId    String?
+  offer      Offer?      @relation(fields: [offerId], references: [id])
+  partnerId  String?
+  partner    Partner?    @relation(fields: [partnerId], references: [id])
+  source     OfferSource
+  externalId String?
+  payload    Json?
+  createdAt  DateTime    @default(now())
+
+  @@index([source, createdAt])
+  @@index([offerId])
+}
+
+model PageTag {
+  pageId String
+  tagId  String
+  page   Page @relation(fields: [pageId], references: [id])
+  tag    Tag  @relation(fields: [tagId], references: [id])
+
+  @@id([pageId, tagId])
+}
+
+enum OfferSource {
+  AMAZON
+  ALIBABA
+  ALIEXPRESS
+  TEMU
+  EBAY
+}
+
+enum PageType {
+  ARTICLE
+  REVIEW
+  CATEGORY
+  LANDING
+}
+
+enum PageStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model AutomationConfig {
+  id              String      @id @default(cuid())
+  isEnabled       Boolean     @default(false)
+  source          OfferSource @default(AMAZON)
+  autoPostEnabled Boolean     @default(false)
+  aiRewriteEnabled Boolean    @default(false)
+  publishMode     String      @default("DRAFT")
+  maxPostsPerRun  Int         @default(5)
+  minPriceUsd     Decimal?    @db.Decimal(12, 2)
+  promptTemplate  String?
+  updatedAt       DateTime    @updatedAt
+  createdAt       DateTime    @default(now())
+}
+
+model AutomationNiche {
+  id           String   @id @default(cuid())
+  source       OfferSource
+  categoryPath String
+  keywords     String
+  browseNodeId String?
+  isEnabled    Boolean  @default(true)
+  priority     Int      @default(100)
+  maxItems     Int      @default(10)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([source, categoryPath])
+  @@index([source, isEnabled, priority])
+}
+
+model AutomationRun {
+  id          String      @id @default(cuid())
+  source      OfferSource
+  status      String      @default("QUEUED")
+  itemsSeen   Int         @default(0)
+  itemsPosted Int         @default(0)
+  message     String?
+  startedAt   DateTime    @default(now())
+  finishedAt  DateTime?
+  createdAt   DateTime    @default(now())
+
+  @@index([source, createdAt])
+}
+
+model AiGenerationLog {
+  id             String   @id @default(cuid())
+  runId          String?
+  pageId         String?
+  categoryPath   String?
+  keyword        String?
+  productName    String?
+  model          String?
+  provider       String?
+  usedAi         Boolean  @default(false)
+  fallbackUsed   Boolean  @default(false)
+  promptHash     String?
+  promptChars    Int      @default(0)
+  outputChars    Int      @default(0)
+  qualityScore   Int?
+  errorMessage   String?
+  createdAt      DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([usedAi, fallbackUsed])
+}
+
+model AutomationPatternSignal {
+  id                 String      @id @default(cuid())
+  source             OfferSource
+  categoryPath       String
+  keyword            String
+  productName        String
+  amazonQuery        String?
+  competitorQueries  Json?
+  competitorsFound   Int         @default(0)
+  validOffersCount   Int         @default(0)
+  aiUsed             Boolean     @default(false)
+  qualityScore       Int?
+  createdAt          DateTime    @default(now())
+
+  @@index([source, categoryPath, createdAt])
+}
+
+model AutomationStepLog {
+  id        String   @id @default(cuid())
+  runId     String?
+  step      String
+  status    String   @default("OK")
+  input     Json?
+  output    Json?
+  message   String?
+  createdAt DateTime @default(now())
+
+  @@index([runId, createdAt])
+  @@index([step, createdAt])
+}
+
+model AutomationCache {
+  key       String   @id
+  value     Json
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([expiresAt])
+}
