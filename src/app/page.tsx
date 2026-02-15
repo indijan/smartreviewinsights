@@ -31,19 +31,23 @@ export default async function HomePage({ searchParams }: Props) {
         ) : (
           pages.map((entry) => (
             <article key={entry.id} className="card article-link-card">
+              <div className={`article-card-row${entry.heroImageUrl ? "" : " no-thumb"}`}>
               {entry.heroImageUrl ? (
                 <Link href={`/${entry.slug}`} className="article-card-thumb-link" aria-label={entry.title}>
                   <img src={entry.heroImageUrl} alt={entry.title} className="article-card-thumb" loading="lazy" />
                 </Link>
               ) : null}
-              <Link href={`/${entry.slug}`}>
-                <h2>{entry.title}</h2>
-              </Link>
-              {entry.excerpt ? <p className="page-sub">{entry.excerpt}</p> : null}
-              <p className="meta">
-                {entry.type}
-                {entry.publishedAt ? ` · ${new Date(entry.publishedAt).toLocaleDateString()}` : ""}
-              </p>
+                <div className="article-card-content">
+                  <Link href={`/${entry.slug}`}>
+                    <h2>{entry.title}</h2>
+                  </Link>
+                  {entry.excerpt ? <p className="page-sub">{entry.excerpt}</p> : null}
+                  <p className="meta">
+                    {entry.type}
+                    {entry.publishedAt ? ` · ${new Date(entry.publishedAt).toLocaleDateString()}` : ""}
+                  </p>
+                </div>
+              </div>
             </article>
           ))
         )}
