@@ -294,8 +294,11 @@ export default async function CatchAllPage({ params }: Props) {
               <section className="offer-section">
                 <h3 className="page-title" style={{ fontSize: "1.12rem" }}>Related Reviews</h3>
                 <div className="offer-grid">
-                  {related.map((item: { id: string; slug: string; title: string; excerpt: string | null }) => (
+                  {related.map((item: { id: string; slug: string; title: string; excerpt: string | null; heroImageUrl: string | null }) => (
                     <Link key={item.id} href={`/${item.slug}`} className="card offer-card related-item" style={{ textDecoration: "none", color: "inherit" }}>
+                      {item.heroImageUrl ? (
+                        <img src={item.heroImageUrl} alt={item.title} className="related-thumb" loading="lazy" />
+                      ) : null}
                       <strong className="offer-title">{item.title}</strong>
                       {item.excerpt ? <p className="meta">{item.excerpt}</p> : null}
                       <span className="offer-cta">Read Review</span>

@@ -31,6 +31,11 @@ export default async function CategoryPage({ params, searchParams }: Props) {
         ) : (
           result.items.map((entry) => (
             <article key={entry.id} className="card article-link-card">
+              {entry.heroImageUrl ? (
+                <Link href={`/${entry.slug}`} className="article-card-thumb-link" aria-label={entry.title}>
+                  <img src={entry.heroImageUrl} alt={entry.title} className="article-card-thumb" loading="lazy" />
+                </Link>
+              ) : null}
               <Link href={`/${entry.slug}`}>
                 <h2>{entry.title}</h2>
               </Link>

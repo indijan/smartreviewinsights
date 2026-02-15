@@ -129,6 +129,7 @@ export async function getLatestPages(page = 1, limit = 50) {
         excerpt: true,
         type: true,
         publishedAt: true,
+        heroImageUrl: true,
       },
     }),
     prisma.page.count({ where: where as never }),
@@ -171,6 +172,7 @@ export async function getRelatedReviewPages(args: {
       slug: true,
       title: true,
       excerpt: true,
+      heroImageUrl: true,
     },
   });
 }
@@ -219,6 +221,7 @@ export async function getCategoryPages(slugParts: string[], page = 1, limit = 30
         excerpt: true,
         publishedAt: true,
         type: true,
+        heroImageUrl: true,
       },
     }),
     prisma.page.count({ where: where as never }),
