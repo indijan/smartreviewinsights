@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { OfferSource, PageStatus, PageType, PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { Pool } from "pg";
 
 const connectionString = process.env.DATABASE_URL;
@@ -24,7 +24,7 @@ async function main() {
       },
       offers: {
         create: {
-          source: OfferSource.AMAZON,
+          source: "AMAZON",
           title: "Acme Smart Watch X2 on Amazon",
           price: 149.99,
           currency: "USD",
@@ -39,22 +39,22 @@ async function main() {
     data: [
       {
         slug: "best-smart-watch-2026",
-        type: PageType.REVIEW,
+        type: "REVIEW",
         title: "Best Smart Watch 2026",
         excerpt: "Top pick, budget pick, and alternatives with affiliate-ready blocks.",
         contentMd:
           "## TL;DR\n- Good for: people who want battery life and health tracking.\n- Not good for: users who need full LTE calling.\n\n## Top pick\nAcme Smart Watch X2 has strong battery and readable display.\n\n## Pros\n- Long battery life\n- Bright AMOLED display\n\n## Cons\n- No LTE variant\n\n## FAQ\n### Is this waterproof?\nYes, rated 5 ATM.",
-        status: PageStatus.PUBLISHED,
+        status: "PUBLISHED",
         publishedAt: new Date(),
         productId: product.id,
       },
       {
         slug: "category/smart-watch",
-        type: PageType.CATEGORY,
+        type: "CATEGORY",
         title: "Smart Watch Category",
         excerpt: "Category landing for smart watch content.",
         contentMd: "# Smart Watch\nExplore reviews and comparisons.",
-        status: PageStatus.PUBLISHED,
+        status: "PUBLISHED",
         publishedAt: new Date(),
       },
     ],
