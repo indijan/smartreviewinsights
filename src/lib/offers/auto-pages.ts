@@ -1,5 +1,5 @@
-import { OfferSource, PageStatus, PageType } from "@prisma/client";
 import { categoryLabel } from "@/lib/category-taxonomy";
+import type { OfferSource } from "@/lib/offer-source";
 import { prisma } from "@/lib/prisma";
 
 export type AutoPageResult = {
@@ -110,8 +110,8 @@ export async function generateOfferLandingPagesForSource(opts: {
             title,
             excerpt: `Updated ${sourceLabel(opts.source)} picks for ${categoryLabel(niche.categoryPath)}.`,
             contentMd,
-            type: PageType.LANDING,
-            status: opts.publishMode === "PUBLISHED" ? PageStatus.PUBLISHED : PageStatus.DRAFT,
+            type: "LANDING",
+            status: opts.publishMode === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
             publishedAt: opts.publishMode === "PUBLISHED" ? new Date() : null,
           },
           select: { id: true },
@@ -122,8 +122,8 @@ export async function generateOfferLandingPagesForSource(opts: {
             title,
             excerpt: `Updated ${sourceLabel(opts.source)} picks for ${categoryLabel(niche.categoryPath)}.`,
             contentMd,
-            type: PageType.LANDING,
-            status: opts.publishMode === "PUBLISHED" ? PageStatus.PUBLISHED : PageStatus.DRAFT,
+            type: "LANDING",
+            status: opts.publishMode === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
             publishedAt: opts.publishMode === "PUBLISHED" ? new Date() : null,
           },
           select: { id: true },

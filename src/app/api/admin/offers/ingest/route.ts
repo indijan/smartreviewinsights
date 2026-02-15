@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { OfferSource } from "@prisma/client";
 import { getAdminTokenFromRequest, isAuthorizedAdmin } from "@/lib/admin";
+import type { OfferSource } from "@/lib/offer-source";
 import { ingestOfferItems, type OfferIngestItem } from "@/lib/offers/ingest";
 
 function isOfferSource(v: string): v is OfferSource {

@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
-import { OfferSource, PageStatus } from "@prisma/client";
 import { ingestOfferItems, type OfferIngestItem } from "@/lib/offers/ingest";
+import type { OfferSource } from "@/lib/offer-source";
 import { prisma } from "@/lib/prisma";
 
 export type AmazonLinkModeResult = {
@@ -29,7 +29,7 @@ async function resolvePageSlugForCategory(categoryPath: string) {
 
   const page = await prisma.page.findFirst({
     where: {
-      status: PageStatus.PUBLISHED,
+      status: "PUBLISHED",
       tags: {
         some: {
           tag: { name: leaf },
@@ -58,7 +58,7 @@ export async function generateAmazonAffiliateLinks(opts?: { limit?: number }) {
   const marketplace = process.env.AMAZON_CREATOR_MARKETPLACE || process.env.AMAZON_PAAPI_MARKETPLACE || "www.amazon.com";
 
   const niches = await prisma.automationNiche.findMany({
-    where: { source: OfferSource.AMAZON, isEnabled: true },
+    where: { source: "AMAZON", isEnabled: true },
     orderBy: [{ priority: "asc" }, { updatedAt: "desc" }],
     take: limit,
   });
@@ -79,7 +79,7 @@ export async function generateAmazonAffiliateLinks(opts?: { limit?: number }) {
     const pageSlug = await resolvePageSlugForCategory(niche.categoryPath);
 
     items.push({
-      source: OfferSource.AMAZON,
+      source: "AMAZON",
       externalId: externalIdForLink(niche.categoryPath, keyword),
       title: `${keyword} on Amazon`,
       price: null,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { OfferSource } from "@prisma/client";
 import { isAdminSession } from "@/lib/admin";
+import type { OfferSource } from "@/lib/offer-source";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
@@ -14,11 +14,11 @@ export async function POST(request: NextRequest) {
   const deepLinkPattern = String(form.get("deepLinkPattern") || "").trim() || null;
 
   const partner = await prisma.partner.upsert({
-    where: { name_source: { name: "eBay", source: OfferSource.EBAY } },
+    where: { name_source: { name: "eBay", source: "EBAY" } },
     update: { isEnabled: true },
     create: {
       name: "eBay",
-      source: OfferSource.EBAY,
+      source: "EBAY",
       websiteUrl: "https://www.ebay.com",
       hasApi: false,
       isEnabled: true,

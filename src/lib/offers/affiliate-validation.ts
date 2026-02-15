@@ -1,4 +1,4 @@
-import { OfferSource } from "@prisma/client";
+import type { OfferSource } from "@/lib/offer-source";
 
 export function validateAffiliateUrl(source: OfferSource, affiliateUrl: string, opts?: { amazonTrackingId?: string | null }) {
   try {

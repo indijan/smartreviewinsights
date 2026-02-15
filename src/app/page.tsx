@@ -14,7 +14,7 @@ export default async function HomePage({ searchParams }: Props) {
   const pages = result.items;
   const startPage = Math.max(1, result.page - 3);
   const endPage = Math.min(result.totalPages, result.page + 3);
-  const pageWindow = [];
+  const pageWindow: number[] = [];
   for (let p = startPage; p <= endPage; p += 1) {
     pageWindow.push(p);
   }

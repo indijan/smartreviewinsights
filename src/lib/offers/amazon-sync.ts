@@ -1,4 +1,4 @@
-import { OfferSource } from "@prisma/client";
+import type { OfferSource } from "@/lib/offer-source";
 import { prisma } from "@/lib/prisma";
 import { ingestOfferItems, type OfferIngestItem } from "@/lib/offers/ingest";
 import { fetchAmazonItemsByAsins } from "@/lib/providers/amazon-paapi";
@@ -50,7 +50,7 @@ export async function syncAmazonOffers(opts?: { limit?: number; onlyOutdatedHour
 
   const offers = await prisma.offer.findMany({
     where: {
-      source: OfferSource.AMAZON,
+      source: "AMAZON",
       ...(outdatedBefore ? { OR: [{ lastUpdated: null }, { lastUpdated: { lt: outdatedBefore } }] } : {}),
     },
     orderBy: [{ lastUpdated: "asc" }, { updatedAt: "asc" }],
@@ -106,7 +106,7 @@ export async function syncAmazonOffers(opts?: { limit?: number; onlyOutdatedHour
   const chunks: string[][] = [];
   for (let i = 0; i < asins.length; i += 10) chunks.push(asins.slice(i, i + 10));
 
-  const fetched = [];
+  const fetched: Array<{ asin: string; title: string | null; price: number | null; currency: string | null; detailPageUrl: string | null; imageUrl: string | null; availability: string | null; raw: unknown }> = [];
   for (const chunk of chunks) {
     const items = await fetchAmazonItemsByAsins(chunk);
     fetched.push(...items);
@@ -119,7 +119,7 @@ export async function syncAmazonOffers(opts?: { limit?: number; onlyOutdatedHour
     }
 
     return {
-      source: OfferSource.AMAZON,
+      source: "AMAZON",
       externalId: item.asin,
       title: item.title ?? undefined,
       price: item.price,

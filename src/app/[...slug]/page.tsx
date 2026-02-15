@@ -156,9 +156,9 @@ export default async function CatchAllPage({ params }: Props) {
     );
   const contextualOffers = await getContextualOffersForPage(page);
   const candidateOffers = page.type === "REVIEW" ? (page.product?.offers ?? []) : (page.product?.offers?.length ? page.product.offers : contextualOffers);
-  const validOffers = candidateOffers.filter((o) => isLikelyProductOfferUrl(o.source, o.affiliateUrl));
-  const dedupedOffers = Array.from(new Map(validOffers.map((o) => [`${o.source}::${o.affiliateUrl}`, o])).values());
-  const rankedOffers = rankOffers(dedupedOffers);
+  const validOffers = candidateOffers.filter((o: { source: string; affiliateUrl: string }) => isLikelyProductOfferUrl(o.source, o.affiliateUrl));
+  const dedupedOffers = Array.from(new Map(validOffers.map((o: { source: string; affiliateUrl: string }) => [`${o.source}::${o.affiliateUrl}`, o])).values());
+  const rankedOffers = rankOffers(dedupedOffers as never);
   const displayOffers = pickDisplayOffers(rankedOffers);
   const mobileSplit = splitAtPros(html);
   const firstOffer = rankedOffers[0]?.offer ?? null;
@@ -167,12 +167,12 @@ export default async function CatchAllPage({ params }: Props) {
     category: page.product?.category ?? null,
     slugPrefix: page.slug.split("/").slice(0, 2).join("/") || null,
     title: page.title,
-    tagNames: page.tags.map((t) => t.tag.name),
+    tagNames: page.tags.map((t: { tag: { name: string } }) => t.tag.name),
     limit: 3,
   });
   const categoryPath = page.product?.category || page.slug.split("/").slice(0, -1).join("/");
-  const categoryParts = categoryPath.split("/").filter(Boolean);
-  const breadcrumbCategory = categoryParts.map((part, idx) => ({
+  const categoryParts = categoryPath.split("/").filter((x: string) => Boolean(x));
+  const breadcrumbCategory = categoryParts.map((part: string, idx: number) => ({
     label: titleCaseSlugPart(part),
     href: `/category/${categoryParts.slice(0, idx + 1).join("/")}`,
   }));
@@ -210,7 +210,7 @@ export default async function CatchAllPage({ params }: Props) {
         />
         <nav className="breadcrumb" aria-label="Breadcrumb">
           <Link href="/">Home</Link>
-          {breadcrumbCategory.map((item) => (
+          {breadcrumbCategory.map((item: { label: string; href: string }) => (
             <span key={item.href}>
               <span className="sep">/</span>
               <Link href={item.href}>{item.label}</Link>
@@ -240,7 +240,7 @@ export default async function CatchAllPage({ params }: Props) {
                     <section className="mobile-offer-inline card">
                       <h3 className="page-title" style={{ fontSize: "1.05rem" }}>Live Product Offers</h3>
                       <div className="offer-sidebar-list">
-                        {displayOffers.map(({ offer }) => (
+                        {displayOffers.map(({ offer }: { offer: { id: string; source: string; affiliateUrl: string; title: string | null; price: { toString(): string } | null; currency: string; partner?: { name: string } | null } }) => (
                           <a
                             key={`mobile-side-${offer.id}`}
                             href={
@@ -270,7 +270,7 @@ export default async function CatchAllPage({ params }: Props) {
               <section className="mobile-offer-bottom card">
                 <h3 className="page-title" style={{ fontSize: "1.05rem" }}>Live Product Offers</h3>
                 <div className="offer-sidebar-list">
-                  {displayOffers.map(({ offer }) => (
+                  {displayOffers.map(({ offer }: { offer: { id: string; source: string; affiliateUrl: string; title: string | null; price: { toString(): string } | null; currency: string; partner?: { name: string } | null } }) => (
                     <a
                       key={`mobile-bottom-${offer.id}`}
                       href={
@@ -294,7 +294,7 @@ export default async function CatchAllPage({ params }: Props) {
               <section className="offer-section">
                 <h3 className="page-title" style={{ fontSize: "1.12rem" }}>Related Reviews</h3>
                 <div className="offer-grid">
-                  {related.map((item) => (
+                  {related.map((item: { id: string; slug: string; title: string; excerpt: string | null }) => (
                     <Link key={item.id} href={`/${item.slug}`} className="card offer-card related-item" style={{ textDecoration: "none", color: "inherit" }}>
                       <strong className="offer-title">{item.title}</strong>
                       {item.excerpt ? <p className="meta">{item.excerpt}</p> : null}
@@ -312,7 +312,7 @@ export default async function CatchAllPage({ params }: Props) {
               <aside className="offer-sidebar card">
               <h3 className="page-title" style={{ fontSize: "1.05rem" }}>Live Product Offers</h3>
               <div className="offer-sidebar-list">
-                {displayOffers.map(({ offer }) => (
+                {displayOffers.map(({ offer }: { offer: { id: string; source: string; affiliateUrl: string; title: string | null; price: { toString(): string } | null; currency: string; partner?: { name: string } | null } }) => (
                   <a
                     key={`side-${offer.id}`}
                     href={

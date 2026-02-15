@@ -1,6 +1,20 @@
-import { OfferSource, type Offer, type Partner } from "@prisma/client";
+import type { OfferSource } from "@/lib/offer-source";
 
-type RankedOfferInput = Offer & { partner: Partner | null };
+type RankedOfferInput = {
+  id: string;
+  source: OfferSource;
+  title: string | null;
+  price: { toString(): string } | null;
+  currency: string;
+  availability: string | null;
+  affiliateUrl: string;
+  partnerId: string | null;
+  imageUrl: string | null;
+  lastUpdated: Date | null;
+  updatedAt: Date;
+  createdAt: Date;
+  partner: { hasApi: boolean; name: string } | null;
+};
 
 export type RankedOffer = {
   offer: RankedOfferInput;
@@ -27,7 +41,7 @@ function freshnessScore(date: Date | null): number {
   return 0.15;
 }
 
-function apiConfidence(partner: Partner | null): number {
+function apiConfidence(partner: { hasApi: boolean } | null): number {
   if (!partner) return 0.3;
   return partner.hasApi ? 1 : 0.55;
 }

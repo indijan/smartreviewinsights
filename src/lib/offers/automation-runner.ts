@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
-import { OfferSource, PageStatus, PageType, type AutomationConfig, type AutomationNiche } from "@prisma/client";
 import { validateAffiliateUrl } from "@/lib/offers/affiliate-validation";
 import { categoryLabel } from "@/lib/category-taxonomy";
+import type { OfferSource } from "@/lib/offer-source";
 import { searchGoogleCseBySource, type CseItem } from "@/lib/offers/cse-link-discovery";
 import { ingestOfferItems, type OfferIngestItem } from "@/lib/offers/ingest";
 import { prisma } from "@/lib/prisma";
@@ -22,6 +22,20 @@ type SourceConfig = {
   partnerName: string;
   deepLinkPattern: string | null;
   trackingId: string | null;
+};
+
+type AutomationConfigLike = {
+  source: OfferSource;
+  publishMode?: string | null;
+  aiRewriteEnabled?: boolean | null;
+  promptTemplate?: string | null;
+};
+
+type AutomationNicheLike = {
+  source: OfferSource;
+  categoryPath: string;
+  keywords: string;
+  maxItems: number;
 };
 
 const COMPETITOR_SOURCES: OfferSource[] = ["ALIEXPRESS", "TEMU", "ALIBABA", "EBAY"];
@@ -256,7 +270,7 @@ async function sourceConfig(source: OfferSource): Promise<SourceConfig> {
   };
 }
 
-async function collectAmazonCandidates(niche: AutomationNiche, target: number) {
+async function collectAmazonCandidates(niche: AutomationNicheLike, target: number) {
   const queries = [niche.keywords, `${niche.keywords} review`, `${niche.keywords} best`];
   const seen = new Set<string>();
   const candidates: CseItem[] = [];
@@ -289,7 +303,7 @@ async function collectCompetitors(keyword: string, productName: string) {
   return all;
 }
 
-export async function runAutomationPipeline(config: AutomationConfig, opts?: { runId?: string }): Promise<RunnerResult> {
+export async function runAutomationPipeline(config: AutomationConfigLike, opts?: { runId?: string }): Promise<RunnerResult> {
   const niches = await prisma.automationNiche.findMany({
     where: { source: config.source, isEnabled: true },
     orderBy: [{ priority: "asc" }, { updatedAt: "desc" }],
@@ -407,8 +421,8 @@ export async function runAutomationPipeline(config: AutomationConfig, opts?: { r
       }));
 
       const rewritten = await rewriteArticle({
-        aiRewriteEnabled: config.aiRewriteEnabled,
-        promptTemplate: config.promptTemplate,
+        aiRewriteEnabled: Boolean(config.aiRewriteEnabled),
+        promptTemplate: config.promptTemplate ?? null,
         nicheLabel: categoryLabel(categoryPath),
         keyword: niche.keywords,
         productName,
@@ -421,12 +435,12 @@ export async function runAutomationPipeline(config: AutomationConfig, opts?: { r
             where: { id: existingPage.id },
             data: {
               productId: product.id,
-              type: PageType.REVIEW,
+              type: "REVIEW",
               title: `${productName} - ${categoryLabel(categoryPath)} Buying Guide`,
               excerpt: `Compared offers for ${productName} in ${categoryLabel(categoryPath)}.`,
               contentMd,
               heroImageUrl: candidate.imageUrl || null,
-              status: config.publishMode === "PUBLISHED" ? PageStatus.PUBLISHED : PageStatus.DRAFT,
+              status: config.publishMode === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
               publishedAt: config.publishMode === "PUBLISHED" ? new Date() : null,
             },
             select: { id: true },
@@ -435,12 +449,12 @@ export async function runAutomationPipeline(config: AutomationConfig, opts?: { r
             data: {
               slug: pageSlug,
               productId: product.id,
-              type: PageType.REVIEW,
+              type: "REVIEW",
               title: `${productName} - ${categoryLabel(categoryPath)} Buying Guide`,
               excerpt: `Compared offers for ${productName} in ${categoryLabel(categoryPath)}.`,
               contentMd,
               heroImageUrl: candidate.imageUrl || null,
-              status: config.publishMode === "PUBLISHED" ? PageStatus.PUBLISHED : PageStatus.DRAFT,
+              status: config.publishMode === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
               publishedAt: config.publishMode === "PUBLISHED" ? new Date() : null,
             },
             select: { id: true },

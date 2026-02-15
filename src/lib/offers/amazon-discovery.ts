@@ -1,5 +1,5 @@
-import { OfferSource, PageStatus } from "@prisma/client";
 import { ingestOfferItems, type OfferIngestItem } from "@/lib/offers/ingest";
+import type { OfferSource } from "@/lib/offer-source";
 import { prisma } from "@/lib/prisma";
 import { searchAmazonItems } from "@/lib/providers/amazon-paapi";
 
@@ -20,7 +20,7 @@ async function resolvePageSlugForCategory(categoryPath: string) {
 
   const page = await prisma.page.findFirst({
     where: {
-      status: PageStatus.PUBLISHED,
+      status: "PUBLISHED",
       tags: {
         some: {
           tag: {
@@ -40,7 +40,7 @@ export async function discoverAmazonOffers(opts?: { limit?: number; minPriceUsd?
   const limit = Math.max(1, Math.min(200, opts?.limit ?? 50));
 
   const niches = await prisma.automationNiche.findMany({
-    where: { source: OfferSource.AMAZON, isEnabled: true },
+    where: { source: "AMAZON", isEnabled: true },
     orderBy: [{ priority: "asc" }, { updatedAt: "desc" }],
     take: limit,
   });
@@ -72,7 +72,7 @@ export async function discoverAmazonOffers(opts?: { limit?: number; minPriceUsd?
       if (opts?.minPriceUsd != null && (price == null || price < opts.minPriceUsd)) continue;
 
       ingestItems.push({
-        source: OfferSource.AMAZON,
+        source: "AMAZON",
         externalId: item.asin,
         title: item.title ?? undefined,
         price,

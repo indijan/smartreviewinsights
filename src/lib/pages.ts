@@ -1,4 +1,3 @@
-import { PageStatus, PageType } from "@prisma/client";
 import { categoryDescendantLeafSlugs } from "@/lib/category-taxonomy";
 import { prisma } from "@/lib/prisma";
 import { normalizeSlug } from "@/lib/slug";
@@ -55,7 +54,7 @@ export async function resolvePublishedPageBySlug(rawSlug: string) {
   const alt = await prisma.page.findFirst({
     where: {
       slug: { in: Array.from(altSlugs) },
-      status: PageStatus.PUBLISHED,
+      status: "PUBLISHED",
     },
     include: PAGE_WITH_OFFERS_INCLUDE,
   });
@@ -113,13 +112,13 @@ export async function getLatestPages(page = 1, limit = 50) {
   const safePage = Math.max(1, page);
   const safeLimit = Math.max(1, Math.min(100, limit));
   const where = {
-    status: PageStatus.PUBLISHED,
+    status: "PUBLISHED",
     publishedAt: { not: null },
   };
 
   const [items, total] = await Promise.all([
     prisma.page.findMany({
-      where,
+      where: where as never,
       orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
       skip: (safePage - 1) * safeLimit,
       take: safeLimit,
@@ -132,7 +131,7 @@ export async function getLatestPages(page = 1, limit = 50) {
         publishedAt: true,
       },
     }),
-    prisma.page.count({ where }),
+    prisma.page.count({ where: where as never }),
   ]);
 
   return {
@@ -158,8 +157,8 @@ export async function getRelatedReviewPages(args: {
   return prisma.page.findMany({
     where: {
       id: { not: args.pageId },
-      status: PageStatus.PUBLISHED,
-      type: { not: PageType.CATEGORY },
+      status: "PUBLISHED",
+      type: { not: "CATEGORY" },
       OR: [
         { product: { category: args.category } },
         { product: { category: { startsWith: `${args.category}/` } } },
@@ -192,9 +191,9 @@ export async function getCategoryPages(slugParts: string[], page = 1, limit = 30
   }));
 
   const where = {
-    status: PageStatus.PUBLISHED,
+    status: "PUBLISHED",
     OR: [
-      { type: PageType.CATEGORY, slug: `category/${categoryPath}` },
+      { type: "CATEGORY", slug: `category/${categoryPath}` },
       { product: { category: categoryPath } },
       { product: { category: { startsWith: `${categoryPath}/` } } },
       { tags: { some: { tag: { name: categoryPath } } } },
@@ -209,7 +208,7 @@ export async function getCategoryPages(slugParts: string[], page = 1, limit = 30
 
   const [items, total] = await Promise.all([
     prisma.page.findMany({
-      where,
+      where: where as never,
       orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
       skip: (safePage - 1) * safeLimit,
       take: safeLimit,
@@ -222,7 +221,7 @@ export async function getCategoryPages(slugParts: string[], page = 1, limit = 30
         type: true,
       },
     }),
-    prisma.page.count({ where }),
+    prisma.page.count({ where: where as never }),
   ]);
 
   return {

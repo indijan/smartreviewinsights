@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { OfferSource } from "@prisma/client";
 import { getAdminTokenFromRequest, isAuthorizedAdmin } from "@/lib/admin";
+import type { OfferSource } from "@/lib/offer-source";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {

@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
-import { OfferSource, PageStatus } from "@prisma/client";
 import { ingestOfferItems, type OfferIngestItem } from "@/lib/offers/ingest";
+import type { OfferSource } from "@/lib/offer-source";
 import { prisma } from "@/lib/prisma";
 
 export type CseItem = {
@@ -76,7 +76,7 @@ async function resolvePageSlugForCategory(categoryPath: string) {
 
   const page = await prisma.page.findFirst({
     where: {
-      status: PageStatus.PUBLISHED,
+      status: "PUBLISHED",
       tags: {
         some: {
           tag: { name: leaf },

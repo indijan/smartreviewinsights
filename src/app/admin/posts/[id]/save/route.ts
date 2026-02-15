@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PageStatus } from "@prisma/client";
 import { validateAffiliateUrl } from "@/lib/offers/affiliate-validation";
 import { isAdminSession } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
@@ -15,13 +14,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const slug = String(form.get("slug") || "").trim().replace(/^\/+|\/+$/g, "");
   const excerptRaw = String(form.get("excerpt") || "");
   const contentMd = String(form.get("contentMd") || "").trim();
-  const status = String(form.get("status") || "DRAFT").toUpperCase() === "PUBLISHED" ? PageStatus.PUBLISHED : PageStatus.DRAFT;
+  const status = String(form.get("status") || "DRAFT").toUpperCase() === "PUBLISHED" ? "PUBLISHED" : "DRAFT";
 
   if (!title || !slug || !contentMd) {
     return NextResponse.redirect(new URL(`/admin/posts/${id}`, request.url), 302);
   }
 
-  if (status === PageStatus.PUBLISHED) {
+  if (status === "PUBLISHED") {
     const pageWithOffers = await prisma.page.findUnique({
       where: { id },
       include: {
@@ -57,7 +56,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       excerpt: excerptRaw.trim() || null,
       contentMd,
       status,
-      publishedAt: status === PageStatus.PUBLISHED ? new Date() : null,
+      publishedAt: status === "PUBLISHED" ? new Date() : null,
     },
   });
 

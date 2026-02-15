@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
-import { OfferSource, PageStatus, PageType, type AutomationConfig } from "@prisma/client";
 import { categoryLabel } from "@/lib/category-taxonomy";
+import type { OfferSource } from "@/lib/offer-source";
 import { validateAffiliateUrl } from "@/lib/offers/affiliate-validation";
 import { ingestOfferItems, type OfferIngestItem } from "@/lib/offers/ingest";
 import { prisma } from "@/lib/prisma";
@@ -67,6 +67,13 @@ type CseFetchMeta = {
   quotaError: boolean;
   usedFallback: boolean;
   errorMessage: string | null;
+};
+
+type AutomationConfigLike = {
+  source: OfferSource;
+  publishMode?: string | null;
+  aiRewriteEnabled?: boolean | null;
+  promptTemplate?: string | null;
 };
 
 function stableHash(value: string) {
@@ -945,7 +952,7 @@ Return strict JSON only.`;
   return out as Record<string, unknown>;
 }
 
-export async function runProductionSafeAutomationPipeline(config: AutomationConfig, opts?: { runId?: string }): Promise<PipelineResult> {
+export async function runProductionSafeAutomationPipeline(config: AutomationConfigLike, opts?: { runId?: string }): Promise<PipelineResult> {
   const amazonTag =
     process.env.AMAZON_CREATOR_PARTNER_TAG ||
     process.env.AMAZON_PAAPI_PARTNER_TAG ||
@@ -1301,12 +1308,12 @@ export async function runProductionSafeAutomationPipeline(config: AutomationConf
             where: { id: existing.id },
             data: {
               productId: product.id,
-              type: PageType.REVIEW,
+              type: "REVIEW",
               title: `${normalizedProductTitle} Review`,
               excerpt: `${String(scrapedListing?.description || finalJson.review.tldr).slice(0, 220)}`,
               contentMd: md,
               heroImageUrl: scrapedListing?.images?.[0] || chosen.imageUrl || null,
-              status: config.publishMode === "PUBLISHED" ? PageStatus.PUBLISHED : PageStatus.DRAFT,
+              status: config.publishMode === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
               publishedAt: config.publishMode === "PUBLISHED" ? new Date() : null,
             },
             select: { id: true },
@@ -1315,12 +1322,12 @@ export async function runProductionSafeAutomationPipeline(config: AutomationConf
             data: {
               slug: pageSlug,
               productId: product.id,
-              type: PageType.REVIEW,
+              type: "REVIEW",
               title: `${normalizedProductTitle} Review`,
               excerpt: `${String(scrapedListing?.description || finalJson.review.tldr).slice(0, 220)}`,
               contentMd: md,
               heroImageUrl: scrapedListing?.images?.[0] || chosen.imageUrl || null,
-              status: config.publishMode === "PUBLISHED" ? PageStatus.PUBLISHED : PageStatus.DRAFT,
+              status: config.publishMode === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
               publishedAt: config.publishMode === "PUBLISHED" ? new Date() : null,
             },
             select: { id: true },

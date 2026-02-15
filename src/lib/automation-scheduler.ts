@@ -1,4 +1,4 @@
-import { OfferSource } from "@prisma/client";
+import type { OfferSource } from "@/lib/offer-source";
 import { prisma } from "@/lib/prisma";
 
 type NicheWeight = {
@@ -10,7 +10,7 @@ type NicheWeight = {
 export async function getWeightedAmazonNiches(days = 30) {
   const interval = `${Math.max(1, Math.min(365, days))} days`;
   const niches = await prisma.automationNiche.findMany({
-    where: { source: OfferSource.AMAZON, isEnabled: true },
+    where: { source: "AMAZON", isEnabled: true },
     orderBy: [{ priority: "asc" }, { updatedAt: "desc" }],
   });
   if (niches.length === 0) return [] as NicheWeight[];

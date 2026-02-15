@@ -1,4 +1,4 @@
-import { OfferSource, Prisma } from "@prisma/client";
+import type { OfferSource } from "@/lib/offer-source";
 import { prisma } from "@/lib/prisma";
 
 export type OfferIngestItem = {
@@ -18,10 +18,10 @@ export type OfferIngestItem = {
   payload?: unknown;
 };
 
-function toDecimal(value: number | null | undefined): Prisma.Decimal | null {
+function toDecimal(value: number | null | undefined): number | null {
   if (value === null || value === undefined) return null;
   if (!Number.isFinite(value)) return null;
-  return new Prisma.Decimal(value);
+  return value;
 }
 
 export async function ingestOfferItems(items: OfferIngestItem[]) {
@@ -140,7 +140,7 @@ export async function ingestOfferItems(items: OfferIngestItem[]) {
 
     const shouldWritePriceHistory =
       currentPrice !== null &&
-      (!existing || existing.price === null || new Prisma.Decimal(existing.price).toString() !== currentPrice.toString());
+      (!existing || existing.price === null || String(existing.price) !== String(currentPrice));
 
     if (shouldWritePriceHistory) {
       await prisma.priceHistory.create({
@@ -159,7 +159,7 @@ export async function ingestOfferItems(items: OfferIngestItem[]) {
         partnerId: partner?.id ?? null,
         source: item.source,
         externalId: item.externalId,
-        payload: (item.payload ?? null) as Prisma.InputJsonValue,
+        payload: (item.payload ?? null) as never,
       },
     });
   }

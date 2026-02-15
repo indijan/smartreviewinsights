@@ -1,5 +1,5 @@
-import { OfferSource } from "@prisma/client";
 import { categoryAutomationNodes } from "@/lib/category-taxonomy";
+import type { OfferSource } from "@/lib/offer-source";
 import { prisma } from "@/lib/prisma";
 
 function labelToKeyword(path: string) {

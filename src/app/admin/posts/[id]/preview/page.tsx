@@ -116,7 +116,7 @@ export default async function AdminPostPreviewPage({ params }: Props) {
   const candidateOffers = page.type === "REVIEW" ? (page.product?.offers ?? []) : (page.product?.offers?.length ? page.product.offers : contextualOffers);
   const validOffers = candidateOffers.filter((o) => isLikelyProductOfferUrl(o.source, o.affiliateUrl));
   const dedupedOffers = Array.from(new Map(validOffers.map((o) => [`${o.source}::${o.affiliateUrl}`, o])).values());
-  const rankedOffers = rankOffers(dedupedOffers);
+  const rankedOffers = rankOffers(dedupedOffers as never);
   const displayOffers = pickDisplayOffers(rankedOffers);
 
   return (

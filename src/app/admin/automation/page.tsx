@@ -1,9 +1,9 @@
-import { OfferSource } from "@prisma/client";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ensureDefaultNichesForSource } from "@/lib/automation-niches";
 import { isAdminSession } from "@/lib/admin";
 import { CATEGORY_TAXONOMY, categoryAutomationNodes, categoryLabel } from "@/lib/category-taxonomy";
+import type { OfferSource } from "@/lib/offer-source";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -154,7 +154,9 @@ export default async function AdminAutomationPage() {
           </div>
           <div style={{ marginTop: "0.8rem", display: "grid", gap: "0.55rem" }}>
             {automationNodes.map((node, index) => {
-              const n = nicheMap.get(node.path);
+              const n = nicheMap.get(node.path) as
+                | { priority?: number; keywords?: string; maxItems?: number; isEnabled?: boolean }
+                | undefined;
               const isChild = node.path.includes("/");
               return (
                 <div

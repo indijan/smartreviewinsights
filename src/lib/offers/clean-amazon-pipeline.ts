@@ -1,5 +1,4 @@
 import crypto from "node:crypto";
-import { PageStatus, PageType, type AutomationConfig } from "@prisma/client";
 import { categoryLabel } from "@/lib/category-taxonomy";
 import { validateAffiliateUrl } from "@/lib/offers/affiliate-validation";
 import { ingestOfferItems } from "@/lib/offers/ingest";
@@ -16,6 +15,10 @@ type PipelineResult = {
   skippedNoValidAmazon: number;
   aiAttempts: number;
   aiFailures: number;
+};
+
+type AutomationConfigLike = {
+  publishMode?: string | null;
 };
 
 type CleanPipelineOptions = {
@@ -456,7 +459,7 @@ async function uniqueSlug(base: string) {
   }
 }
 
-export async function runCleanAmazonPipeline(config: AutomationConfig, opts?: CleanPipelineOptions): Promise<PipelineResult> {
+export async function runCleanAmazonPipeline(config: AutomationConfigLike, opts?: CleanPipelineOptions): Promise<PipelineResult> {
   const targetSet = new Set(opts?.targetCategoryPaths ?? []);
   const forceMaxItemsPerNiche = opts?.forceMaxItemsPerNiche;
   const maxTotalPosts = opts?.maxTotalPosts;
@@ -633,12 +636,12 @@ export async function runCleanAmazonPipeline(config: AutomationConfig, opts?: Cl
         data: {
           slug,
           productId: dbProduct.id,
-          type: PageType.REVIEW,
+          type: "REVIEW",
           title,
           excerpt: cleanText(review.excerpt || product.description || title).slice(0, 240),
           contentMd,
           heroImageUrl: product.images[0] || item.imageUrl || null,
-          status: config.publishMode === "PUBLISHED" ? PageStatus.PUBLISHED : PageStatus.DRAFT,
+          status: config.publishMode === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
           publishedAt: config.publishMode === "PUBLISHED" ? new Date() : null,
         },
         select: { id: true },

@@ -1,7 +1,7 @@
-import { OfferSource } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminSession } from "@/lib/admin";
 import { ensureDefaultNichesForSource } from "@/lib/automation-niches";
+import type { OfferSource } from "@/lib/offer-source";
 import { prisma } from "@/lib/prisma";
 
 const SOURCES: OfferSource[] = ["AMAZON", "ALIEXPRESS", "TEMU", "ALIBABA", "EBAY"];
