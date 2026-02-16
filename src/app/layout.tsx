@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import Script from "next/script";
 import { Merriweather, Source_Sans_3 } from "next/font/google";
 import HeaderNav from "@/components/header-nav";
 import { CATEGORY_TAXONOMY } from "@/lib/category-taxonomy";
@@ -25,10 +26,21 @@ export const metadata: Metadata = {
   description: "Structured product reviews and price-aware buying guides.",
 };
 
+const GA_MEASUREMENT_ID = "G-3REMRYBD57";
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
       <body className={`${heading.variable} ${body.variable}`}>
+        <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} strategy="afterInteractive" />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_MEASUREMENT_ID}');
+          `}
+        </Script>
         <header className="site-header">
           <div className="shell site-header-inner">
             <Link href="/" className="brand">
