@@ -46,6 +46,14 @@ type ScrapedProduct = {
   price: number | null;
 };
 
+type RecentPageTitle = {
+  id: string;
+  slug: string;
+  title: string;
+};
+
+const RECENT_TITLE_DUPLICATE_WINDOW_DAYS = 7;
+
 function hash(value: string) {
   return crypto.createHash("sha1").update(value).digest("hex");
 }
@@ -62,6 +70,26 @@ function toSlug(value: string) {
 
 function cleanText(input: string) {
   return String(input || "").replace(/\s+/g, " ").trim();
+}
+
+function normalizeTitleForDedupe(input: string) {
+  return cleanText(input)
+    .replace(/^amazon\.com\s*:?\s*/i, "")
+    .replace(/\s+-\s+smart review$/i, "")
+    .replace(/\breview\b/gi, "")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function isLikelyDuplicateTitle(candidate: string, existing: string) {
+  const a = normalizeTitleForDedupe(candidate);
+  const b = normalizeTitleForDedupe(existing);
+  if (!a || !b) return false;
+  if (a === b) return true;
+  if (a.length >= 28 && b.length >= 28 && (a.includes(b) || b.includes(a))) return true;
+  return false;
 }
 
 function stripHtml(input: string) {
@@ -511,6 +539,24 @@ export async function runCleanAmazonPipeline(config: AutomationConfigLike, opts?
         })
         .filter(Boolean),
     );
+    const cutoff = new Date(Date.now() - RECENT_TITLE_DUPLICATE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+    const recentPageTitles: RecentPageTitle[] = await prisma.page.findMany({
+      where: {
+        type: "REVIEW",
+        createdAt: { gte: cutoff },
+        OR: [
+          { product: { category: niche.categoryPath } },
+          { product: { category: { startsWith: `${niche.categoryPath}/` } } },
+        ],
+      },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 300,
+    });
 
     const keyword = extractKeywordFromNicheInput(niche.keywords || niche.categoryPath);
     const found = new Map<string, SearchItem>();
@@ -547,6 +593,20 @@ export async function runCleanAmazonPipeline(config: AutomationConfigLike, opts?
       }
 
       const review = ai.parsed;
+      const title = cleanText(review.title || `${cleanText(product.title)} Review`);
+      const duplicateTitlePage = recentPageTitles.find((p) => isLikelyDuplicateTitle(title, p.title));
+      if (duplicateTitlePage) {
+        await logStep(
+          opts?.runId,
+          "DEDUPE_TITLE_REPEAT",
+          "WARN",
+          { asin: product.asin, niche: niche.categoryPath, title },
+          { existingPageId: duplicateTitlePage.id, existingSlug: duplicateTitlePage.slug, existingTitle: duplicateTitlePage.title },
+          `Skipped repeated review title inside ${RECENT_TITLE_DUPLICATE_WINDOW_DAYS}-day window.`,
+        );
+        continue;
+      }
+
       const productId = `clean_prod_${hash(`${niche.categoryPath}:${product.asin}`)}`;
       const dbProduct = await prisma.product.upsert({
         where: { id: productId },
@@ -611,7 +671,6 @@ export async function runCleanAmazonPipeline(config: AutomationConfigLike, opts?
       createdOffers += ingest.createdOffers;
       updatedOffers += ingest.updatedOffers;
 
-      const title = cleanText(review.title || `${cleanText(product.title)} Review`);
       const slug = await uniqueSlug(`${niche.categoryPath}/${toSlug(title)}`);
       const contentMd = [
         "## Listing Highlights",
@@ -666,6 +725,7 @@ export async function runCleanAmazonPipeline(config: AutomationConfigLike, opts?
         },
       });
       await logStep(opts?.runId, "AI_USAGE", "OK", { asin: product.asin }, { responseId: ai.responseId, usage: ai.usage });
+      recentPageTitles.unshift({ id: created.id, slug, title });
 
       createdPages += 1;
       createdInNiche += 1;
