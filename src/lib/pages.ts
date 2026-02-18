@@ -2,6 +2,17 @@ import { categoryDescendantLeafSlugs } from "@/lib/category-taxonomy";
 import { prisma } from "@/lib/prisma";
 import { normalizeSlug } from "@/lib/slug";
 
+export type SearchListItem = {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  type: string;
+  publishedAt: Date | null;
+  heroImageUrl: string | null;
+  canonicalName: string | null;
+};
+
 const PAGE_WITH_OFFERS_INCLUDE = {
   product: {
     include: {
@@ -108,12 +119,78 @@ export async function getContextualOffersForPage(page: {
   });
 }
 
-export async function getLatestPages(page = 1, limit = 50) {
-  const safePage = Math.max(1, page);
-  const safeLimit = Math.max(1, Math.min(100, limit));
+export function buildTextSearchFilter(query?: string | null) {
+  const q = String(query || "").trim();
+  if (!q) return null;
+  const parts = q.split(/\s+/).filter(Boolean).slice(0, 8);
+  if (parts.length === 0) return null;
+  return {
+    AND: parts.map((part) => ({
+      OR: [
+        { title: { contains: part, mode: "insensitive" as const } },
+        { excerpt: { contains: part, mode: "insensitive" as const } },
+        { product: { canonicalName: { contains: part, mode: "insensitive" as const } } },
+      ],
+    })),
+  };
+}
+
+export async function searchPublishedPages(query: string, opts?: { categoryPath?: string | null; limit?: number }) {
+  const searchFilter = buildTextSearchFilter(query);
+  if (!searchFilter) return [] as SearchListItem[];
+  const limit = Math.max(10, Math.min(200, opts?.limit ?? 80));
+  const categoryPath = normalizeSlug(String(opts?.categoryPath || ""));
   const where = {
     status: "PUBLISHED",
     publishedAt: { not: null },
+    ...(categoryPath
+      ? {
+          OR: [
+            { product: { category: categoryPath } },
+            { product: { category: { startsWith: `${categoryPath}/` } } },
+            { tags: { some: { tag: { name: categoryPath } } } },
+          ],
+        }
+      : {}),
+    ...searchFilter,
+  };
+
+  return prisma.page.findMany({
+    where: where as never,
+    orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+    take: limit,
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      excerpt: true,
+      type: true,
+      publishedAt: true,
+      heroImageUrl: true,
+      product: { select: { canonicalName: true } },
+    },
+  }).then((rows) =>
+    rows.map((r) => ({
+      id: r.id,
+      slug: r.slug,
+      title: r.title,
+      excerpt: r.excerpt,
+      type: r.type,
+      publishedAt: r.publishedAt,
+      heroImageUrl: r.heroImageUrl,
+      canonicalName: r.product?.canonicalName ?? null,
+    })),
+  );
+}
+
+export async function getLatestPages(page = 1, limit = 50, query?: string | null) {
+  const safePage = Math.max(1, page);
+  const safeLimit = Math.max(1, Math.min(100, limit));
+  const searchFilter = buildTextSearchFilter(query);
+  const where = {
+    status: "PUBLISHED",
+    publishedAt: { not: null },
+    ...(searchFilter ? searchFilter : {}),
   };
 
   const [items, total] = await Promise.all([
@@ -177,7 +254,7 @@ export async function getRelatedReviewPages(args: {
   });
 }
 
-export async function getCategoryPages(slugParts: string[], page = 1, limit = 30) {
+export async function getCategoryPages(slugParts: string[], page = 1, limit = 30, query?: string | null) {
   const categoryPath = normalizeSlug(slugParts.join("/"));
   const parts = categoryPath.split("/").filter(Boolean);
   const leaf = parts[parts.length - 1] ?? categoryPath;
@@ -192,7 +269,7 @@ export async function getCategoryPages(slugParts: string[], page = 1, limit = 30
     },
   }));
 
-  const where = {
+  const whereBase = {
     status: "PUBLISHED",
     OR: [
       { type: "CATEGORY", slug: `category/${categoryPath}` },
@@ -204,6 +281,13 @@ export async function getCategoryPages(slugParts: string[], page = 1, limit = 30
       { tags: { some: { tag: { name: leaf } } }, AND: andTagFilters },
     ],
   };
+  const searchFilter = buildTextSearchFilter(query);
+  const where = searchFilter
+    ? {
+        ...whereBase,
+        AND: [searchFilter],
+      }
+    : whereBase;
 
   const safePage = Math.max(1, page);
   const safeLimit = Math.max(1, Math.min(100, limit));

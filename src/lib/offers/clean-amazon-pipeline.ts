@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { categoryLabel } from "@/lib/category-taxonomy";
+import { mirrorImagesToR2 } from "@/lib/r2-media";
 import { validateAffiliateUrl } from "@/lib/offers/affiliate-validation";
 import { ingestOfferItems } from "@/lib/offers/ingest";
 import { prisma } from "@/lib/prisma";
@@ -45,6 +46,8 @@ type ScrapedProduct = {
   images: string[];
   price: number | null;
 };
+
+const MAX_PRODUCT_IMAGES = 4;
 
 type RecentPageTitle = {
   id: string;
@@ -369,6 +372,7 @@ async function scrapeProduct(asin: string, runId?: string): Promise<ScrapedProdu
     const htmlPrice = parsePriceFromHtml(html);
     const price = (Number.isFinite(metaPrice || NaN) ? metaPrice : null) ?? jsonLdPrice ?? htmlPrice ?? snippetPrice ?? null;
     const sortedImages = Array.from(images).sort((a, b) => imageScore(b) - imageScore(a));
+    const mirroredImages = await mirrorImagesToR2(sortedImages, `amazon/${asin.toLowerCase()}`, MAX_PRODUCT_IMAGES);
 
     const product: ScrapedProduct = {
       asin,
@@ -376,7 +380,7 @@ async function scrapeProduct(asin: string, runId?: string): Promise<ScrapedProdu
       title,
       description,
       bullets,
-      images: sortedImages.slice(0, 8),
+      images: mirroredImages.slice(0, MAX_PRODUCT_IMAGES),
       price,
     };
     await setCache(cacheKey, product, 14);
@@ -613,13 +617,13 @@ export async function runCleanAmazonPipeline(config: AutomationConfigLike, opts?
         update: {
           canonicalName: cleanText(product.title),
           category: niche.categoryPath,
-          attributes: { asin: product.asin, images: product.images.slice(0, 8) } as never,
+          attributes: { asin: product.asin, images: product.images.slice(0, MAX_PRODUCT_IMAGES) } as never,
         },
         create: {
           id: productId,
           canonicalName: cleanText(product.title),
           category: niche.categoryPath,
-          attributes: { asin: product.asin, images: product.images.slice(0, 8) } as never,
+          attributes: { asin: product.asin, images: product.images.slice(0, MAX_PRODUCT_IMAGES) } as never,
         },
         select: { id: true },
       });

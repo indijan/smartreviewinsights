@@ -75,6 +75,43 @@ function cleanOfferTitle(input: string | null | undefined) {
     .trim();
 }
 
+function extractFallbackAffiliateOffersFromHtml(html: string) {
+  const links = [...html.matchAll(/<a[^>]*href=["'](https?:\/\/[^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)];
+  const out: Array<{
+    offer: {
+      id: string;
+      source: string;
+      affiliateUrl: string;
+      title: string | null;
+      price: null;
+      currency: string;
+      partner?: { name: string } | null;
+    };
+  }> = [];
+  const seen = new Set<string>();
+  let i = 0;
+  for (const m of links) {
+    const href = String(m[1] || "").trim();
+    if (!href || seen.has(href)) continue;
+    if (!/amazon\./i.test(href)) continue;
+    const text = String(m[2] || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    seen.add(href);
+    out.push({
+      offer: {
+        id: `fallback-${i++}`,
+        source: "AMAZON",
+        affiliateUrl: href,
+        title: text || "Amazon offer",
+        price: null,
+        currency: "USD",
+        partner: { name: "Amazon" },
+      },
+    });
+    if (out.length >= MAX_DISPLAY_OFFERS) break;
+  }
+  return out;
+}
+
 function splitAtPros(html: string) {
   const match = html.match(/<h2[^>]*>\s*Pros\s*<\/h2>/i);
   if (!match || match.index == null) return null;
@@ -160,6 +197,8 @@ export default async function CatchAllPage({ params }: Props) {
   const dedupedOffers = Array.from(new Map(validOffers.map((o: { source: string; affiliateUrl: string }) => [`${o.source}::${o.affiliateUrl}`, o])).values());
   const rankedOffers = rankOffers(dedupedOffers as never);
   const displayOffers = pickDisplayOffers(rankedOffers);
+  const fallbackOffers = displayOffers.length === 0 ? extractFallbackAffiliateOffersFromHtml(html) : [];
+  const renderOffers = displayOffers.length ? displayOffers : fallbackOffers;
   const mobileSplit = splitAtPros(html);
   const firstOffer = rankedOffers[0]?.offer ?? null;
   const related = await getRelatedReviewPages({
@@ -236,11 +275,11 @@ export default async function CatchAllPage({ params }: Props) {
               {mobileSplit ? (
                 <>
                   <div dangerouslySetInnerHTML={{ __html: mobileSplit.beforePros }} />
-                  {displayOffers.length ? (
+                  {renderOffers.length ? (
                     <section className="mobile-offer-inline card">
                       <h3 className="page-title" style={{ fontSize: "1.05rem" }}>Live Product Offers</h3>
                       <div className="offer-sidebar-list">
-                        {displayOffers.map(({ offer }: { offer: { id: string; source: string; affiliateUrl: string; title: string | null; price: { toString(): string } | null; currency: string; partner?: { name: string } | null } }) => (
+                        {renderOffers.map(({ offer }: { offer: { id: string; source: string; affiliateUrl: string; title: string | null; price: { toString(): string } | null; currency: string; partner?: { name: string } | null } }) => (
                           <a
                             key={`mobile-side-${offer.id}`}
                             href={
@@ -266,11 +305,11 @@ export default async function CatchAllPage({ params }: Props) {
                 <div dangerouslySetInnerHTML={{ __html: html }} />
               )}
             </div>
-            {displayOffers.length ? (
+            {renderOffers.length ? (
               <section className="mobile-offer-bottom card">
                 <h3 className="page-title" style={{ fontSize: "1.05rem" }}>Live Product Offers</h3>
                 <div className="offer-sidebar-list">
-                  {displayOffers.map(({ offer }: { offer: { id: string; source: string; affiliateUrl: string; title: string | null; price: { toString(): string } | null; currency: string; partner?: { name: string } | null } }) => (
+                  {renderOffers.map(({ offer }: { offer: { id: string; source: string; affiliateUrl: string; title: string | null; price: { toString(): string } | null; currency: string; partner?: { name: string } | null } }) => (
                     <a
                       key={`mobile-bottom-${offer.id}`}
                       href={
@@ -314,12 +353,12 @@ export default async function CatchAllPage({ params }: Props) {
 
           </div>
 
-          {displayOffers.length ? (
+          {renderOffers.length ? (
             <StickySidebar className="offer-sticky-wrap">
               <aside className="offer-sidebar card">
               <h3 className="page-title" style={{ fontSize: "1.05rem" }}>Live Product Offers</h3>
               <div className="offer-sidebar-list">
-                {displayOffers.map(({ offer }: { offer: { id: string; source: string; affiliateUrl: string; title: string | null; price: { toString(): string } | null; currency: string; partner?: { name: string } | null } }) => (
+                {renderOffers.map(({ offer }: { offer: { id: string; source: string; affiliateUrl: string; title: string | null; price: { toString(): string } | null; currency: string; partner?: { name: string } | null } }) => (
                   <a
                     key={`side-${offer.id}`}
                     href={

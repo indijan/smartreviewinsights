@@ -28,6 +28,7 @@
     "bootstrap:amazon:niches": "tsx scripts/bootstrap-amazon-niches.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.883.0",
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.3.0",
     "marked": "^17.0.1",

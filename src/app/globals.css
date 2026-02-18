@@ -202,6 +202,64 @@ h4 {
   box-shadow: var(--shadow);
 }
 
+.search-hero {
+  margin-top: 0.8rem;
+  display: grid;
+  gap: 0.65rem;
+  border-color: #b7d8d4;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(15, 118, 110, 0.1), transparent 35%),
+    linear-gradient(180deg, #f4fbfa 0%, #ecf6f4 100%);
+  box-shadow:
+    0 10px 24px rgba(15, 118, 110, 0.12),
+    inset 0 0 0 1px rgba(15, 118, 110, 0.07);
+}
+
+.search-hero-input {
+  border: 1px solid #9ccbc5;
+  border-radius: 12px;
+  padding: 0.75rem 0.85rem;
+  background: #ffffff;
+  font-size: 1rem;
+  box-shadow: inset 0 1px 2px rgba(20, 20, 20, 0.06);
+}
+
+.search-hero-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18);
+}
+
+.search-hero-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.search-hero-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 12px;
+  border: 1px solid #0d6f68;
+  background: linear-gradient(180deg, #129487 0%, #0f766e 100%);
+  color: #fff;
+  padding: 0.55rem 0.95rem;
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  box-shadow: 0 8px 16px rgba(15, 118, 110, 0.26);
+  transition: transform 130ms ease, box-shadow 130ms ease, background 130ms ease;
+}
+
+.search-hero-btn:hover,
+.search-hero-btn:focus-visible {
+  transform: translateY(-1px);
+  background: linear-gradient(180deg, #10a193 0%, #0d6b64 100%);
+  box-shadow: 0 10px 20px rgba(15, 118, 110, 0.34);
+}
+
 .breadcrumb {
   display: flex;
   gap: 0.35rem;

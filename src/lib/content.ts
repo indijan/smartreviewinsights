@@ -27,6 +27,23 @@ function stripLegacyNoise(content: string): string {
     .trim();
 }
 
+function replaceLegacyButtonShortcodes(content: string): string {
+  return content.replace(/\[mks\\?_button\s+([\s\S]*?)\\?\]/gi, (_full, attrs: string) => {
+    const normalized = String(attrs || "")
+      .replace(/\\_/g, "_")
+      .replace(/\\"/g, "\"")
+      .replace(/\\'/g, "'");
+    const url = normalized.match(/\burl\s*=\s*"([^"]+)"/i)?.[1]?.trim();
+    const title = normalized.match(/\btitle\s*=\s*"([^"]+)"/i)?.[1]?.trim() || "Check Price";
+    if (!url) return "";
+    return `[${title}](${url})`;
+  });
+}
+
+function unescapeLegacyMarkdownLinks(content: string): string {
+  return content.replace(/\\\[(.+?)\]\((https?:\/\/[^\s)]+)\)/g, "[$1]($2)");
+}
+
 function stripTopTldrSection(content: string, excerpt?: string | null): string {
   const md = content.trim();
   const match = md.match(/^##\s*TL;DR\s*\n+([\s\S]*?)(?=\n##\s|\n*$)/i);
@@ -47,7 +64,9 @@ function stripTopTldrSection(content: string, excerpt?: string | null): string {
 }
 
 export function normalizeContentForRender(contentMd: string, _title: string, excerpt?: string | null): string {
-  const stripped = stripTopTldrSection(contentMd || "", excerpt);
+  const shortcodeReplaced = replaceLegacyButtonShortcodes(contentMd || "");
+  const linksUnescaped = unescapeLegacyMarkdownLinks(shortcodeReplaced);
+  const stripped = stripTopTldrSection(linksUnescaped, excerpt);
   const withoutSchema = stripLegacySchemaDump(stripped);
   const cleaned = stripLegacyNoise(withoutSchema);
   const clean = cleaned.trim();
