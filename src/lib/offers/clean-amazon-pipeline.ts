@@ -394,12 +394,32 @@ async function scrapeProduct(asin: string, runId?: string): Promise<ScrapedProdu
 type AiPayload = {
   title: string;
   excerpt: string;
+  listingHighlights: string[];
   pros: string[];
   cons: string[];
   bestFor: string[];
   notFor: string[];
   bodyParagraphs: string[];
 };
+
+function normalizeForLineCompare(input: string) {
+  return cleanText(input).toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, "").replace(/\s+/g, " ").trim();
+}
+
+function pickListingHighlights(review: AiPayload, product: ScrapedProduct) {
+  const sourceBullets = product.bullets.map(normalizeForLineCompare).filter(Boolean);
+  const aiLines = Array.isArray(review.listingHighlights) ? review.listingHighlights : [];
+  const cleanedAi = aiLines
+    .map((x) => cleanText(x))
+    .filter((x) => x.length >= 18)
+    .filter((x) => !sourceBullets.includes(normalizeForLineCompare(x)));
+  if (cleanedAi.length >= 3) return cleanedAi.slice(0, 6);
+  const fallback = product.bullets
+    .slice(0, 6)
+    .map((x) => cleanText(x))
+    .map((x) => (/[.!?]$/.test(x) ? `Highlights practical value: ${x}` : `Highlights practical value: ${x}.`));
+  return fallback;
+}
 
 function parseOpenAiText(json: Record<string, unknown>) {
   const flat = String(json.output_text || "").trim();
@@ -418,6 +438,7 @@ Schema:
 {
   "title": "string",
   "excerpt": "1-2 sentence summary",
+  "listingHighlights": ["4-6 rewritten highlights; do NOT copy source bullets verbatim"],
   "pros": ["5 items"],
   "cons": ["3 items"],
   "bestFor": ["3 items"],
@@ -678,7 +699,7 @@ export async function runCleanAmazonPipeline(config: AutomationConfigLike, opts?
       const slug = await uniqueSlug(`${niche.categoryPath}/${toSlug(title)}`);
       const contentMd = [
         "## Listing Highlights",
-        ...product.bullets.slice(0, 6).map((x) => `- ${x}`),
+        ...pickListingHighlights(review, product).map((x) => `- ${x}`),
         "",
         "## Pros",
         ...review.pros.slice(0, 5).map((x) => `- ${cleanText(x)}`),

@@ -25,7 +25,8 @@
     "sync:amazon": "tsx scripts/amazon-sync.ts",
     "refresh:published:offers": "tsx scripts/refresh-published-offers.ts",
     "sync:wxr:categories": "tsx scripts/sync-wxr-categories.ts",
-    "bootstrap:amazon:niches": "tsx scripts/bootstrap-amazon-niches.ts"
+    "bootstrap:amazon:niches": "tsx scripts/bootstrap-amazon-niches.ts",
+    "rewrite:listing-highlights": "tsx scripts/rewrite-listing-highlights.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.883.0",
