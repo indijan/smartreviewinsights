@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { normalizeSlug } from "@/lib/slug";
-import { getClientIp, hashIp } from "@/lib/tracking";
+import { buildClickBucketKey, getClickBucketDay, isLikelyBotRequest } from "@/lib/tracking";
 
 export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => null)) as
-    | { offerId?: string; pageSlug?: string; ref?: string }
+    | { offerId?: string; pageSlug?: string }
     | null;
 
   if (!body?.offerId) {
@@ -21,19 +21,41 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "offer not found" }, { status: 404 });
   }
 
+  if (isLikelyBotRequest(request)) {
+    return NextResponse.json({ ok: true, skipped: true });
+  }
+
   const pageSlug = body.pageSlug ? normalizeSlug(body.pageSlug) : null;
   const page = pageSlug
     ? await prisma.page.findUnique({ where: { slug: pageSlug }, select: { id: true } })
     : null;
 
-  await prisma.clickEvent.create({
-    data: {
+  const day = getClickBucketDay();
+  await prisma.clickAggregate.upsert({
+    where: {
+      bucketKey: buildClickBucketKey({
+        day,
+        source: offer.source,
+        pageId: page?.id,
+        offerId: offer.id,
+      }),
+    },
+    create: {
+      bucketKey: buildClickBucketKey({
+        day,
+        source: offer.source,
+        pageId: page?.id,
+        offerId: offer.id,
+      }),
+      day: new Date(`${day}T00:00:00.000Z`),
       offerId: offer.id,
       pageId: page?.id,
       source: offer.source,
-      ref: body.ref?.slice(0, 200) || null,
-      userAgent: request.headers.get("user-agent")?.slice(0, 500) || null,
-      ipHash: hashIp(getClientIp(request)),
+      clicks: 1,
+    },
+    update: {
+      clicks: { increment: 1 },
+      updatedAt: new Date(),
     },
   });
 

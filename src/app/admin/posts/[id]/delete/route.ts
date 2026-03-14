@@ -10,6 +10,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { id } = await params;
 
   await prisma.pageTag.deleteMany({ where: { pageId: id } });
+  await prisma.clickAggregate.deleteMany({ where: { pageId: id } });
   await prisma.clickEvent.deleteMany({ where: { pageId: id } });
   await prisma.page.delete({ where: { id } });
 

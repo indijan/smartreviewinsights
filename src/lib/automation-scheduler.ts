@@ -19,11 +19,11 @@ export async function getWeightedAmazonNiches(days = 30) {
     `
     SELECT
       pr.category AS category,
-      COUNT(*)::int AS clicks
-    FROM "ClickEvent" c
+      COALESCE(SUM(c.clicks), 0)::int AS clicks
+    FROM "ClickAggregate" c
     JOIN "Page" p ON p.id = c."pageId"
     JOIN "Product" pr ON pr.id = p."productId"
-    WHERE c."createdAt" >= now() - ($1::text)::interval
+    WHERE c."day" >= now() - ($1::text)::interval
       AND c."pageId" IS NOT NULL
       AND p.status = 'PUBLISHED'
       AND p.type = 'REVIEW'

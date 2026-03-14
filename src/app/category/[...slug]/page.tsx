@@ -3,7 +3,7 @@ import { categoryLabel } from "@/lib/category-taxonomy";
 import { expandSearchQueryWithAi, rankSearchCandidatesWithAi } from "@/lib/intelligent-search";
 import { getCategoryPages, searchPublishedPages, type SearchListItem } from "@/lib/pages";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 type Props = { params: Promise<{ slug: string[] }>; searchParams: Promise<{ page?: string; q?: string; ai?: string }> };
 

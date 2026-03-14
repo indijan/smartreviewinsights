@@ -15,10 +15,15 @@ function parentLabel(path: string) {
   return parent?.label || "-";
 }
 
-export default async function AdminAutomationPage() {
+type Props = {
+  searchParams: Promise<{ saved?: string; saveError?: string }>;
+};
+
+export default async function AdminAutomationPage({ searchParams }: Props) {
   if (!(await isAdminSession())) {
     redirect("/admin/login");
   }
+  const { saved, saveError } = await searchParams;
 
   const config = await prisma.automationConfig.findFirst({ orderBy: { updatedAt: "desc" } });
   const currentSource = SOURCE;
@@ -49,6 +54,8 @@ export default async function AdminAutomationPage() {
     <main>
       <div className="page-head">
         <h1 className="page-title">Automation Pipeline</h1>
+        {saved === "1" ? <p className="meta" style={{ color: "var(--accent)" }}>Settings saved successfully.</p> : null}
+        {saveError === "1" ? <p className="meta" style={{ color: "#b42318" }}>Save failed. Please review fields and try again.</p> : null}
         <p className="page-sub">Niche selection → Amazon CSE → AI rewrite → competitor offers → draft/published post creation.</p>
         <p className="meta">Primary source: AMAZON. Competitor scan: ALIEXPRESS, TEMU, ALIBABA, EBAY.</p>
         <p style={{ marginTop: 8 }}>

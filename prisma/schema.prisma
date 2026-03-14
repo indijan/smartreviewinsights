@@ -24,8 +24,11 @@ model Page {
 
   tags   PageTag[]
   clicks ClickEvent[]
+  clickAggregates ClickAggregate[]
 
   @@index([status, publishedAt])
+  @@index([status, publishedAt, updatedAt])
+  @@index([productId])
 }
 
 model Product {
@@ -38,6 +41,8 @@ model Product {
 
   pages  Page[]
   offers Offer[]
+
+  @@index([category])
 }
 
 model Offer {
@@ -63,9 +68,11 @@ model Offer {
   priceHistory PriceHistory[]
   clicks       ClickEvent[]
   ingests      OfferIngestEvent[]
+  clickAggregates ClickAggregate[]
 
   @@index([source, lastUpdated])
   @@index([partnerId])
+  @@index([productId, updatedAt])
   @@unique([source, externalId])
 }
 
@@ -94,6 +101,28 @@ model ClickEvent {
   offer Offer? @relation(fields: [offerId], references: [id])
 
   @@index([createdAt])
+  @@index([pageId, createdAt])
+  @@index([offerId, createdAt])
+  @@index([source, createdAt])
+}
+
+model ClickAggregate {
+  bucketKey String      @id
+  day       DateTime
+  pageId    String?
+  offerId   String?
+  source    OfferSource
+  clicks    Int         @default(0)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  page  Page?  @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  offer Offer? @relation(fields: [offerId], references: [id], onDelete: SetNull)
+
+  @@index([day])
+  @@index([pageId, day])
+  @@index([offerId, day])
+  @@index([source, day])
 }
 
 model Tag {

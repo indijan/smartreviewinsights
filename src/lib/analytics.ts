@@ -25,10 +25,10 @@ export async function getClickAnalytics(days = 30) {
   const daily = await prisma.$queryRawUnsafe<DailyClicksRow[]>(
     `
     SELECT
-      to_char(date_trunc('day', "createdAt"), 'YYYY-MM-DD') AS day,
-      COUNT(*)::int AS clicks
-    FROM "ClickEvent"
-    WHERE "createdAt" >= now() - ($1::text)::interval
+      to_char(date_trunc('day', "day"), 'YYYY-MM-DD') AS day,
+      COALESCE(SUM(clicks), 0)::int AS clicks
+    FROM "ClickAggregate"
+    WHERE "day" >= now() - ($1::text)::interval
     GROUP BY 1
     ORDER BY 1 DESC
     `,
@@ -40,10 +40,10 @@ export async function getClickAnalytics(days = 30) {
     SELECT
       p.slug,
       p.title,
-      COUNT(*)::int AS clicks
-    FROM "ClickEvent" c
+      COALESCE(SUM(c.clicks), 0)::int AS clicks
+    FROM "ClickAggregate" c
     JOIN "Page" p ON p.id = c."pageId"
-    WHERE c."createdAt" >= now() - ($1::text)::interval
+    WHERE c."day" >= now() - ($1::text)::interval
       AND c."pageId" IS NOT NULL
     GROUP BY p.id
     ORDER BY clicks DESC
@@ -59,11 +59,11 @@ export async function getClickAnalytics(days = 30) {
       o.title,
       o.source::text AS source,
       p."canonicalName",
-      COUNT(*)::int AS clicks
-    FROM "ClickEvent" c
+      COALESCE(SUM(c.clicks), 0)::int AS clicks
+    FROM "ClickAggregate" c
     JOIN "Offer" o ON o.id = c."offerId"
     JOIN "Product" p ON p.id = o."productId"
-    WHERE c."createdAt" >= now() - ($1::text)::interval
+    WHERE c."day" >= now() - ($1::text)::interval
       AND c."offerId" IS NOT NULL
     GROUP BY o.id, p.id
     ORDER BY clicks DESC
@@ -72,13 +72,15 @@ export async function getClickAnalytics(days = 30) {
     interval
   );
 
-  const totalClicks = await prisma.clickEvent.count({
-    where: {
-      createdAt: {
-        gte: new Date(Date.now() - Math.max(1, days) * 24 * 60 * 60 * 1000),
-      },
-    },
-  });
+  const totalRows = await prisma.$queryRawUnsafe<Array<{ total: number }>>(
+    `
+    SELECT COALESCE(SUM(clicks), 0)::int AS total
+    FROM "ClickAggregate"
+    WHERE "day" >= now() - ($1::text)::interval
+    `,
+    interval
+  );
+  const totalClicks = totalRows[0]?.total ?? 0;
 
   return {
     totalClicks,

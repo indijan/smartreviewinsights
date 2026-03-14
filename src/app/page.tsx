@@ -2,7 +2,7 @@ import Link from "next/link";
 import { expandSearchQueryWithAi, rankSearchCandidatesWithAi } from "@/lib/intelligent-search";
 import { getLatestPages, searchPublishedPages, type SearchListItem } from "@/lib/pages";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 type Props = {
   searchParams: Promise<{ page?: string; q?: string; ai?: string }>;

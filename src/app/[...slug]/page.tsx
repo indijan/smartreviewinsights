@@ -9,7 +9,7 @@ import { rankOffers } from "@/lib/offers-ranking";
 import { getContextualOffersForPage, getRelatedReviewPages, resolvePublishedPageBySlug } from "@/lib/pages";
 import { joinSlug } from "@/lib/slug";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 type Props = { params: Promise<{ slug: string[] }> };
 const MAX_DISPLAY_OFFERS = 3;
