@@ -185,6 +185,7 @@ model PageTag {
   tag    Tag  @relation(fields: [tagId], references: [id])
 
   @@id([pageId, tagId])
+  @@index([tagId, pageId])
 }
 
 enum OfferSource {
