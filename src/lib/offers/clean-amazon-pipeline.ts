@@ -210,6 +210,11 @@ async function getCache<T>(key: string): Promise<T | null> {
   return row.value as T;
 }
 
+async function getStaleCache<T>(key: string): Promise<T | null> {
+  const row = await prisma.automationCache.findUnique({ where: { key } });
+  return row ? (row.value as T) : null;
+}
+
 async function setCache(key: string, value: unknown, ttlDays: number) {
   const expiresAt = new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000);
   await prisma.automationCache.upsert({
@@ -254,24 +259,62 @@ function parseSearchItems(html: string): SearchItem[] {
   return out;
 }
 
-async function scrapeSearchPage(keyword: string, page: number): Promise<SearchItem[]> {
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchAmazonPage(url: string, runId: string | undefined, step: string, input: Record<string, unknown>) {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const response = await fetch(url, {
+      method: "GET",
+      cache: "no-store",
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+    });
+    if (response.ok) return response;
+    if (response.status !== 503 || attempt === 3) {
+      await logStep(runId, step, "WARN", { ...input, attempt }, { status: response.status }, "Amazon request failed");
+      return response;
+    }
+    await logStep(runId, step, "WARN", { ...input, attempt }, { status: response.status }, "Amazon 503, retrying");
+    await sleep(400 * attempt);
+  }
+  throw new Error("Amazon request failed");
+}
+
+function isGenericAmazonTitle(title: string) {
+  const normalized = cleanText(title).toLowerCase();
+  return !normalized || normalized === "amazon.com" || normalized === "amazon.com:" || normalized.length < 8;
+}
+
+function isLikelyCategoryMismatch(categoryPath: string, title: string) {
+  const normalized = cleanText(title).toLowerCase();
+  if (categoryPath === "electronics/portable-speakers") {
+    return /\b(amazon echo|echo dot|echo pop|alexa|smart speaker)\b/.test(normalized);
+  }
+  return false;
+}
+
+async function scrapeSearchPage(keyword: string, page: number, runId?: string): Promise<SearchItem[]> {
   const cacheKey = `clean-search:${hash(`${keyword}:${page}`)}`;
   const cached = await getCache<SearchItem[]>(cacheKey);
   if (cached?.length) return cached;
 
-  const response = await fetch(searchUrlFromKeyword(keyword, page), {
-    method: "GET",
-    cache: "no-store",
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-      "Accept-Language": "en-US,en;q=0.9",
-    },
-  });
-  if (!response.ok) throw new Error(`Amazon search scrape failed (${response.status})`);
+  const response = await fetchAmazonPage(searchUrlFromKeyword(keyword, page), runId, "AMAZON_SEARCH_FETCH", { keyword, page });
+  if (!response.ok) {
+    const stale = await getStaleCache<SearchItem[]>(cacheKey);
+    if (stale?.length) {
+      await logStep(runId, "AMAZON_SEARCH_FETCH", "WARN", { keyword, page }, { staleCount: stale.length }, "Using stale cached search results after fetch failure.");
+      return stale;
+    }
+    throw new Error(`Amazon search scrape failed (${response.status})`);
+  }
   const html = await response.text();
   const items = parseSearchItems(html);
-  await setCache(cacheKey, items, 7);
+  if (items.length > 0) await setCache(cacheKey, items, 7);
   return items;
 }
 
@@ -314,22 +357,14 @@ function extractBullets(html: string) {
   return bullets;
 }
 
-async function scrapeProduct(asin: string, runId?: string): Promise<ScrapedProduct | null> {
+async function scrapeProduct(asin: string, runId?: string, fallbackTitle?: string): Promise<ScrapedProduct | null> {
   const url = normalizeAmazonProductUrl(`https://www.amazon.com/dp/${asin}`, asin);
   const cacheKey = `clean-product:${asin}`;
   const cached = await getCache<ScrapedProduct>(cacheKey);
   if (cached) return cached;
 
   try {
-    const response = await fetch(url, {
-      method: "GET",
-      cache: "no-store",
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-        "Accept-Language": "en-US,en;q=0.9",
-      },
-    });
+    const response = await fetchAmazonPage(url, runId, "AMAZON_PRODUCT_FETCH", { asin });
     if (!response.ok) return null;
     const html = await response.text();
 
@@ -363,7 +398,8 @@ async function scrapeProduct(asin: string, runId?: string): Promise<ScrapedProdu
       if (img && /^https?:\/\//i.test(img)) images.add(highResImage(img));
     }
 
-    const title = cleanText(extractMeta(html, "og:title") || decodeHtml(stripHtml(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || "")));
+    const rawTitle = cleanText(extractMeta(html, "og:title") || decodeHtml(stripHtml(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || "")));
+    const title = isGenericAmazonTitle(rawTitle) ? cleanText(fallbackTitle || rawTitle) : rawTitle;
     const description = cleanText(extractMeta(html, "description") || extractMeta(html, "og:description"));
     const bullets = extractBullets(html);
     const metaPriceRaw = extractMeta(html, "product:price:amount");
@@ -586,7 +622,7 @@ export async function runCleanAmazonPipeline(config: AutomationConfigLike, opts?
     const keyword = extractKeywordFromNicheInput(niche.keywords || niche.categoryPath);
     const found = new Map<string, SearchItem>();
     for (let page = 1; page <= 10; page += 1) {
-      const pageItems = await scrapeSearchPage(keyword, page);
+      const pageItems = await scrapeSearchPage(keyword, page, opts?.runId);
       for (const item of pageItems) {
         if (!found.has(item.asin) && !existingAsins.has(item.asin)) found.set(item.asin, item);
       }
@@ -603,8 +639,21 @@ export async function runCleanAmazonPipeline(config: AutomationConfigLike, opts?
 
     let createdInNiche = 0;
     for (const item of selected) {
-      const product = await scrapeProduct(item.asin, opts?.runId);
+      const product = await scrapeProduct(item.asin, opts?.runId, item.title);
       if (!product) {
+        skippedNoValidAmazon += 1;
+        continue;
+      }
+
+      if (isLikelyCategoryMismatch(niche.categoryPath, product.title || item.title)) {
+        await logStep(
+          opts?.runId,
+          "DISCOVERY_CATEGORY_MISMATCH",
+          "WARN",
+          { asin: item.asin, niche: niche.categoryPath, keyword },
+          { title: product.title || item.title },
+          "Skipped discovery candidate that does not fit niche intent.",
+        );
         skippedNoValidAmazon += 1;
         continue;
       }
@@ -808,7 +857,7 @@ export async function backcheckPublishedAmazonPrices(opts?: { runId?: string; li
     const asin = attrs && typeof attrs.asin === "string" ? attrs.asin.toUpperCase() : "";
     if (!asin) continue;
 
-    const scraped = await scrapeProduct(asin, opts?.runId);
+    const scraped = await scrapeProduct(asin, opts?.runId, offer.title || offer.product.canonicalName);
     if (!scraped) continue;
 
     const ingested = await ingestOfferItems([

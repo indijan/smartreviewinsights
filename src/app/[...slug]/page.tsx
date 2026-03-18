@@ -75,6 +75,20 @@ function cleanOfferTitle(input: string | null | undefined) {
     .trim();
 }
 
+function displayOfferTitle(args: {
+  offerTitle: string | null | undefined;
+  pageTitle: string;
+  productName?: string | null;
+}) {
+  const cleaned = cleanOfferTitle(args.offerTitle);
+  if (cleaned && !/^amazon\.com:?$/i.test(cleaned)) return cleaned;
+
+  const productName = cleanOfferTitle(args.productName);
+  if (productName && !/^amazon\.com:?$/i.test(productName)) return productName;
+
+  return cleanOfferTitle(args.pageTitle) || "Product offer";
+}
+
 function extractFallbackAffiliateOffersFromHtml(html: string) {
   const links = [...html.matchAll(/<a[^>]*href=["'](https?:\/\/[^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)];
   const out: Array<{
@@ -291,7 +305,7 @@ export default async function CatchAllPage({ params }: Props) {
                             rel="sponsored nofollow noopener noreferrer"
                             className="offer-sidebar-item"
                           >
-                            <span className="meta">{cleanOfferTitle(offer.title) || "Product offer"}</span>
+                            <span className="meta">{displayOfferTitle({ offerTitle: offer.title, productName: page.product?.canonicalName, pageTitle: page.title })}</span>
                             <span>{offer.price ? `${offer.price.toString()} ${offer.currency}` : "Live partner price"}</span>
                             <span className="offer-cta">Check Price</span>
                           </a>
@@ -321,7 +335,7 @@ export default async function CatchAllPage({ params }: Props) {
                       rel="sponsored nofollow noopener noreferrer"
                       className="offer-sidebar-item"
                     >
-                      <span className="meta">{cleanOfferTitle(offer.title) || "Product offer"}</span>
+                      <span className="meta">{displayOfferTitle({ offerTitle: offer.title, productName: page.product?.canonicalName, pageTitle: page.title })}</span>
                       <span>{offer.price ? `${offer.price.toString()} ${offer.currency}` : "Live partner price"}</span>
                       <span className="offer-cta">Check Price</span>
                     </a>
@@ -370,7 +384,7 @@ export default async function CatchAllPage({ params }: Props) {
                     rel="sponsored nofollow noopener noreferrer"
                     className="offer-sidebar-item"
                   >
-                    <span className="meta">{cleanOfferTitle(offer.title) || "Product offer"}</span>
+                    <span className="meta">{displayOfferTitle({ offerTitle: offer.title, productName: page.product?.canonicalName, pageTitle: page.title })}</span>
                     <span>{offer.price ? `${offer.price.toString()} ${offer.currency}` : "Live partner price"}</span>
                     <span className="offer-cta">Check Price</span>
                   </a>
