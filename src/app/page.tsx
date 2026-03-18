@@ -15,43 +15,21 @@ export default async function HomePage({ searchParams }: Props) {
   const aiMode = ai === "1";
   const aiExpanded = aiMode ? await expandSearchQueryWithAi(rawQuery, null) : { effectiveQuery: rawQuery, aiUsed: false };
   const effectiveQuery = aiExpanded.effectiveQuery;
-  let result: Awaited<ReturnType<typeof getLatestPages>> = {
-    items: [],
-    total: 0,
-    page: Number.isFinite(currentPage) ? currentPage : 1,
-    limit: 50,
-    totalPages: 1,
-  };
-  let dataUnavailable = false;
-  try {
-    result = await getLatestPages(Number.isFinite(currentPage) ? currentPage : 1, 50);
-  } catch (error) {
-    dataUnavailable = true;
-    console.error("homepage latest pages fallback", error);
-  }
+  const result = await getLatestPages(Number.isFinite(currentPage) ? currentPage : 1, 50);
   let pages = result.items as SearchListItem[];
   let topResults: SearchListItem[] = [];
   let otherResults: SearchListItem[] = [];
   let noRelevant = false;
   let aiRankUsed = false;
   if (rawQuery) {
-    try {
-      const candidates = await searchPublishedPages(effectiveQuery || rawQuery, { limit: 120 });
-      const ranked = await rankSearchCandidatesWithAi(rawQuery, candidates);
-      const byId = new Map(candidates.map((x) => [x.id, x]));
-      topResults = ranked.top.map((x) => byId.get(x.id)).filter((x): x is SearchListItem => Boolean(x));
-      otherResults = ranked.others.map((x) => byId.get(x.id)).filter((x): x is SearchListItem => Boolean(x));
-      noRelevant = ranked.noRelevant;
-      aiRankUsed = ranked.aiUsed;
-      pages = [];
-    } catch (error) {
-      dataUnavailable = true;
-      console.error("homepage search fallback", error);
-      topResults = [];
-      otherResults = [];
-      noRelevant = false;
-      aiRankUsed = false;
-    }
+    const candidates = await searchPublishedPages(effectiveQuery || rawQuery, { limit: 120 });
+    const ranked = await rankSearchCandidatesWithAi(rawQuery, candidates);
+    const byId = new Map(candidates.map((x) => [x.id, x]));
+    topResults = ranked.top.map((x) => byId.get(x.id)).filter((x): x is SearchListItem => Boolean(x));
+    otherResults = ranked.others.map((x) => byId.get(x.id)).filter((x): x is SearchListItem => Boolean(x));
+    noRelevant = ranked.noRelevant;
+    aiRankUsed = ranked.aiUsed;
+    pages = [];
   }
   const startPage = Math.max(1, result.page - 3);
   const endPage = Math.min(result.totalPages, result.page + 3);
@@ -84,12 +62,6 @@ export default async function HomePage({ searchParams }: Props) {
           ) : null}
         </form>
       </div>
-
-      {dataUnavailable ? (
-        <section className="grid-list">
-          <div className="card">Content is temporarily unavailable while the database connection is being restored.</div>
-        </section>
-      ) : null}
 
       {rawQuery ? (
         <>
