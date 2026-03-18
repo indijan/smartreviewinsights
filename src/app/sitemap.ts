@@ -6,12 +6,6 @@ export const revalidate = 86400;
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://smartreviewinsights.com";
 
-  const pages = await prisma.page.findMany({
-    where: { status: "PUBLISHED" },
-    select: { slug: true, updatedAt: true },
-    orderBy: { updatedAt: "desc" },
-  });
-
   const staticRoutes: MetadataRoute.Sitemap = [
     {
       url: `${baseUrl}/`,
@@ -21,12 +15,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  const dynamicRoutes: MetadataRoute.Sitemap = pages.map((page) => ({
-    url: `${baseUrl}/${page.slug}`,
-    lastModified: page.updatedAt,
-    changeFrequency: "weekly",
-    priority: page.slug.startsWith("category/") ? 0.7 : 0.8,
-  }));
+  try {
+    const pages = await prisma.page.findMany({
+      where: { status: "PUBLISHED" },
+      select: { slug: true, updatedAt: true },
+      orderBy: { updatedAt: "desc" },
+    });
 
-  return [...staticRoutes, ...dynamicRoutes];
+    const dynamicRoutes: MetadataRoute.Sitemap = pages.map((page) => ({
+      url: `${baseUrl}/${page.slug}`,
+      lastModified: page.updatedAt,
+      changeFrequency: "weekly",
+      priority: page.slug.startsWith("category/") ? 0.7 : 0.8,
+    }));
+
+    return [...staticRoutes, ...dynamicRoutes];
+  } catch (error) {
+    console.error("sitemap generation fallback", error);
+    return staticRoutes;
+  }
 }
