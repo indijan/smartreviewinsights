@@ -13,7 +13,10 @@ function createClient() {
     throw new Error("DATABASE_URL is required");
   }
 
-  const pool = new Pool({ connectionString });
+  const pool = new Pool({
+    connectionString,
+    max: Number(process.env.PG_POOL_MAX ?? "1"),
+  });
   const adapter = new PrismaPg(pool);
 
   return new PrismaClient({
