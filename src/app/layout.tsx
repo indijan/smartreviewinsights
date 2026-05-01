@@ -19,11 +19,45 @@ const body = Source_Sans_3({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://smartreviewinsights.com"),
+  applicationName: "SmartReviewInsights",
   title: {
     default: "SmartReviewInsights",
     template: "%s | SmartReviewInsights",
   },
-  description: "Structured product reviews and price-aware buying guides.",
+  description: "Independent product reviews, buying guides, and live price-aware recommendations for smarter purchases.",
+  keywords: [
+    "product reviews",
+    "buying guides",
+    "price comparison",
+    "electronics reviews",
+    "smart shopping",
+  ],
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    url: "https://smartreviewinsights.com/",
+    siteName: "SmartReviewInsights",
+    title: "SmartReviewInsights",
+    description: "Independent product reviews, buying guides, and live price-aware recommendations for smarter purchases.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SmartReviewInsights",
+    description: "Independent product reviews, buying guides, and live price-aware recommendations for smarter purchases.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
 };
 
 const GA_MEASUREMENT_ID = "G-3REMRYBD57";

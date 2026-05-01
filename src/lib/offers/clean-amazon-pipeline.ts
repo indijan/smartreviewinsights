@@ -4,6 +4,7 @@ import { mirrorImagesToR2 } from "@/lib/r2-media";
 import { validateAffiliateUrl } from "@/lib/offers/affiliate-validation";
 import { ingestOfferItems } from "@/lib/offers/ingest";
 import { prisma } from "@/lib/prisma";
+import { buildReviewExcerpt, buildReviewTitle } from "@/lib/seo-copy";
 
 type PipelineResult = {
   nichesUsed: number;
@@ -667,7 +668,7 @@ export async function runCleanAmazonPipeline(config: AutomationConfigLike, opts?
       }
 
       const review = ai.parsed;
-      const title = cleanText(review.title || `${cleanText(product.title)} Review`);
+      const title = cleanText(review.title || buildReviewTitle(cleanText(product.title), niche.categoryPath));
       const duplicateTitlePage = recentPageTitles.find((p) => isLikelyDuplicateTitle(title, p.title));
       if (duplicateTitlePage) {
         await logStep(
@@ -771,7 +772,11 @@ export async function runCleanAmazonPipeline(config: AutomationConfigLike, opts?
           productId: dbProduct.id,
           type: "REVIEW",
           title,
-          excerpt: cleanText(review.excerpt || product.description || title).slice(0, 240),
+          excerpt: buildReviewExcerpt({
+            productName: cleanText(product.title),
+            categoryPath: niche.categoryPath,
+            sourceText: cleanText(review.excerpt || product.description || title),
+          }),
           contentMd,
           heroImageUrl: product.images[0] || item.imageUrl || null,
           status: config.publishMode === "PUBLISHED" ? "PUBLISHED" : "DRAFT",

@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
+import { categoryLeafNodes, CATEGORY_TAXONOMY } from "@/lib/category-taxonomy";
 import { expandSearchQueryWithAi, rankSearchCandidatesWithAi } from "@/lib/intelligent-search";
 import { getLatestPages, searchPublishedPages, type SearchListItem } from "@/lib/pages";
 
@@ -7,6 +10,47 @@ export const revalidate = 3600;
 type Props = {
   searchParams: Promise<{ page?: string; q?: string; ai?: string }>;
 };
+
+export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
+  const { page, q } = await searchParams;
+  const currentPage = Math.max(1, Number(page ?? "1") || 1);
+  const rawQuery = String(q || "").trim();
+
+  if (rawQuery) {
+    return {
+      title: `Search: ${rawQuery}`,
+      description: `Search results for ${rawQuery} on SmartReviewInsights.`,
+      alternates: { canonical: "/" },
+      robots: { index: false, follow: true },
+    };
+  }
+
+  if (currentPage > 1) {
+    return {
+      title: `Latest Reviews - Page ${currentPage}`,
+      description: `Browse the latest product reviews and buying guides on page ${currentPage}.`,
+      alternates: { canonical: "/" },
+      robots: { index: false, follow: true },
+    };
+  }
+
+  return {
+    title: "Latest Product Reviews And Buying Guides",
+    description: "Browse the latest independent product reviews, comparisons, and price-aware buying guides.",
+    alternates: { canonical: "/" },
+    openGraph: {
+      type: "website",
+      url: "https://smartreviewinsights.com/",
+      title: "Latest Product Reviews And Buying Guides",
+      description: "Browse the latest independent product reviews, comparisons, and price-aware buying guides.",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "Latest Product Reviews And Buying Guides",
+      description: "Browse the latest independent product reviews, comparisons, and price-aware buying guides.",
+    },
+  };
+}
 
 export default async function HomePage({ searchParams }: Props) {
   const { page, q, ai } = await searchParams;
@@ -37,11 +81,16 @@ export default async function HomePage({ searchParams }: Props) {
   for (let p = startPage; p <= endPage; p += 1) {
     pageWindow.push(p);
   }
+  const featuredCategories = categoryLeafNodes().slice(0, 8);
+  const topLevelCategories = CATEGORY_TAXONOMY;
 
   return (
     <main>
       <div className="page-head">
         <h1 className="page-title">SmartReviewInsights</h1>
+        <p className="page-sub">
+          Independent product reviews, side-by-side comparisons, and price-aware buying guides across electronics, lifestyle, pets, and more.
+        </p>
         <form method="get" className="search-hero card">
           <input
             type="search"
@@ -63,6 +112,35 @@ export default async function HomePage({ searchParams }: Props) {
         </form>
       </div>
 
+      {!rawQuery ? (
+        <>
+          <section className="card">
+            <h2>Explore Review Categories</h2>
+            <p className="page-sub">
+              Start with a topic hub to discover reviews faster and crawl the site through stronger category paths.
+            </p>
+            <div className="pager-row">
+              {topLevelCategories.map((category) => (
+                <Link key={category.path} className="chip" href={`/category/${category.path}`}>
+                  {category.label}
+                </Link>
+              ))}
+            </div>
+          </section>
+
+          <section className="card">
+            <h2>Popular Buying Guide Topics</h2>
+            <div className="pager-row">
+              {featuredCategories.map((category) => (
+                <Link key={category.path} className="chip" href={`/category/${category.path}`}>
+                  {category.label}
+                </Link>
+              ))}
+            </div>
+          </section>
+        </>
+      ) : null}
+
       {rawQuery ? (
         <>
           {noRelevant ? (
@@ -77,7 +155,7 @@ export default async function HomePage({ searchParams }: Props) {
                   <div className={`article-card-row${entry.heroImageUrl ? "" : " no-thumb"}`}>
                     {entry.heroImageUrl ? (
                       <Link href={`/${entry.slug}`} className="article-card-thumb-link" aria-label={entry.title}>
-                        <img src={entry.heroImageUrl} alt={entry.title} className="article-card-thumb" loading="lazy" />
+                        <Image src={entry.heroImageUrl} alt={entry.title} className="article-card-thumb" width={320} height={320} loading="lazy" />
                       </Link>
                     ) : null}
                     <div className="article-card-content">
@@ -98,7 +176,7 @@ export default async function HomePage({ searchParams }: Props) {
                     <div className={`article-card-row${entry.heroImageUrl ? "" : " no-thumb"}`}>
                       {entry.heroImageUrl ? (
                         <Link href={`/${entry.slug}`} className="article-card-thumb-link" aria-label={entry.title}>
-                          <img src={entry.heroImageUrl} alt={entry.title} className="article-card-thumb" loading="lazy" />
+                          <Image src={entry.heroImageUrl} alt={entry.title} className="article-card-thumb" width={320} height={320} loading="lazy" />
                         </Link>
                       ) : null}
                       <div className="article-card-content">
@@ -122,7 +200,7 @@ export default async function HomePage({ searchParams }: Props) {
               <div className={`article-card-row${entry.heroImageUrl ? "" : " no-thumb"}`}>
               {entry.heroImageUrl ? (
                 <Link href={`/${entry.slug}`} className="article-card-thumb-link" aria-label={entry.title}>
-                  <img src={entry.heroImageUrl} alt={entry.title} className="article-card-thumb" loading="lazy" />
+                  <Image src={entry.heroImageUrl} alt={entry.title} className="article-card-thumb" width={320} height={320} loading="lazy" />
                 </Link>
               ) : null}
                 <div className="article-card-content">

@@ -4,6 +4,7 @@ import type { OfferSource } from "@/lib/offer-source";
 import { validateAffiliateUrl } from "@/lib/offers/affiliate-validation";
 import { ingestOfferItems, type OfferIngestItem } from "@/lib/offers/ingest";
 import { prisma } from "@/lib/prisma";
+import { buildReviewExcerpt, buildReviewTitle } from "@/lib/seo-copy";
 
 type PipelineResult = {
   nichesUsed: number;
@@ -1309,8 +1310,12 @@ export async function runProductionSafeAutomationPipeline(config: AutomationConf
             data: {
               productId: product.id,
               type: "REVIEW",
-              title: `${normalizedProductTitle} Review`,
-              excerpt: `${String(scrapedListing?.description || finalJson.review.tldr).slice(0, 220)}`,
+              title: buildReviewTitle(normalizedProductTitle, niche.categoryPath),
+              excerpt: buildReviewExcerpt({
+                productName: normalizedProductTitle,
+                categoryPath: niche.categoryPath,
+                sourceText: String(scrapedListing?.description || finalJson.review.tldr),
+              }),
               contentMd: md,
               heroImageUrl: scrapedListing?.images?.[0] || chosen.imageUrl || null,
               status: config.publishMode === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
@@ -1323,8 +1328,12 @@ export async function runProductionSafeAutomationPipeline(config: AutomationConf
               slug: pageSlug,
               productId: product.id,
               type: "REVIEW",
-              title: `${normalizedProductTitle} Review`,
-              excerpt: `${String(scrapedListing?.description || finalJson.review.tldr).slice(0, 220)}`,
+              title: buildReviewTitle(normalizedProductTitle, niche.categoryPath),
+              excerpt: buildReviewExcerpt({
+                productName: normalizedProductTitle,
+                categoryPath: niche.categoryPath,
+                sourceText: String(scrapedListing?.description || finalJson.review.tldr),
+              }),
               contentMd: md,
               heroImageUrl: scrapedListing?.images?.[0] || chosen.imageUrl || null,
               status: config.publishMode === "PUBLISHED" ? "PUBLISHED" : "DRAFT",

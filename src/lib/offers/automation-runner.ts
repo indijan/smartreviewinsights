@@ -5,6 +5,7 @@ import type { OfferSource } from "@/lib/offer-source";
 import { searchGoogleCseBySource, type CseItem } from "@/lib/offers/cse-link-discovery";
 import { ingestOfferItems, type OfferIngestItem } from "@/lib/offers/ingest";
 import { prisma } from "@/lib/prisma";
+import { buildReviewExcerpt, buildReviewTitle } from "@/lib/seo-copy";
 
 type RunnerResult = {
   nichesUsed: number;
@@ -429,6 +430,12 @@ export async function runAutomationPipeline(config: AutomationConfigLike, opts?:
         snippets: [candidate.snippet, ...competitors.map((c) => c.item.snippet)].filter((v): v is string => Boolean(v)),
       });
       const contentMd = `${rewritten.content}\n\n${buildComparisonSection(compareRows)}`;
+      const reviewTitle = buildReviewTitle(productName, categoryPath);
+      const reviewExcerpt = buildReviewExcerpt({
+        productName,
+        categoryPath,
+        sourceText: `Compare prices, core tradeoffs, and buying considerations for ${productName} in ${categoryLabel(categoryPath)}.`,
+      });
 
       const page = existingPage
         ? await prisma.page.update({
@@ -436,8 +443,8 @@ export async function runAutomationPipeline(config: AutomationConfigLike, opts?:
             data: {
               productId: product.id,
               type: "REVIEW",
-              title: `${productName} - ${categoryLabel(categoryPath)} Buying Guide`,
-              excerpt: `Compared offers for ${productName} in ${categoryLabel(categoryPath)}.`,
+              title: reviewTitle,
+              excerpt: reviewExcerpt,
               contentMd,
               heroImageUrl: candidate.imageUrl || null,
               status: config.publishMode === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
@@ -450,8 +457,8 @@ export async function runAutomationPipeline(config: AutomationConfigLike, opts?:
               slug: pageSlug,
               productId: product.id,
               type: "REVIEW",
-              title: `${productName} - ${categoryLabel(categoryPath)} Buying Guide`,
-              excerpt: `Compared offers for ${productName} in ${categoryLabel(categoryPath)}.`,
+              title: reviewTitle,
+              excerpt: reviewExcerpt,
               contentMd,
               heroImageUrl: candidate.imageUrl || null,
               status: config.publishMode === "PUBLISHED" ? "PUBLISHED" : "DRAFT",

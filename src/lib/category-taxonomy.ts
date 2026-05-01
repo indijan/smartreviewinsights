@@ -81,3 +81,39 @@ export function categoryDescendantLeafSlugs(categoryPath: string): string[] {
   const leaves = node.children ?? [node];
   return leaves.map((leaf) => leaf.path.split("/").pop() || leaf.path);
 }
+
+export function getCategoryNode(path: string): CategoryNode | null {
+  for (const node of CATEGORY_TAXONOMY) {
+    if (node.path === path) return node;
+    const child = node.children?.find((item) => item.path === path);
+    if (child) return child;
+  }
+  return null;
+}
+
+export function getCategoryParent(path: string): CategoryNode | null {
+  for (const node of CATEGORY_TAXONOMY) {
+    if (node.children?.some((child) => child.path === path)) return node;
+  }
+  return null;
+}
+
+export function getCategoryChildren(path: string): CategoryNode[] {
+  const node = CATEGORY_TAXONOMY.find((item) => item.path === path);
+  return node?.children ?? [];
+}
+
+export function getCategorySiblings(path: string): CategoryNode[] {
+  const parent = getCategoryParent(path);
+  if (!parent?.children) return [];
+  return parent.children.filter((child) => child.path !== path);
+}
+
+export function categoryIntro(path: string): string {
+  const label = categoryLabel(path);
+  const parent = getCategoryParent(path);
+  if (parent) {
+    return `Explore ${label.toLowerCase()} reviews, comparisons, and buying advice within our ${parent.label.toLowerCase()} coverage. We focus on standout models, practical tradeoffs, and live offer context.`;
+  }
+  return `Explore ${label.toLowerCase()} reviews, comparisons, and buying guides curated to help you narrow down the right option faster.`;
+}

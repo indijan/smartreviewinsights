@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { marked } from "marked";
@@ -153,10 +154,39 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: "Not found" };
   }
 
+  const title = page.title;
+  const description = page.excerpt ?? `Read the SmartReviewInsights take on ${page.product?.canonicalName ?? page.title}.`;
+  const canonicalPath = `/${page.slug}`;
+  const ogImage = page.heroImageUrl ? [page.heroImageUrl] : undefined;
+
   return {
-    title: page.title,
-    description: page.excerpt ?? undefined,
-    alternates: { canonical: `/${page.slug}` },
+    title,
+    description,
+    alternates: { canonical: canonicalPath },
+    openGraph: {
+      type: page.type === "REVIEW" ? "article" : "website",
+      url: `https://smartreviewinsights.com${canonicalPath}`,
+      title,
+      description,
+      images: ogImage,
+    },
+    twitter: {
+      card: ogImage ? "summary_large_image" : "summary",
+      title,
+      description,
+      images: ogImage,
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+        "max-video-preview": -1,
+      },
+    },
   };
 }
 
@@ -229,6 +259,30 @@ export default async function CatchAllPage({ params }: Props) {
     label: titleCaseSlugPart(part),
     href: `/category/${categoryParts.slice(0, idx + 1).join("/")}`,
   }));
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: "https://smartreviewinsights.com/",
+      },
+      ...breadcrumbCategory.map((item, index) => ({
+        "@type": "ListItem",
+        position: index + 2,
+        name: item.label,
+        item: `https://smartreviewinsights.com${item.href}`,
+      })),
+      {
+        "@type": "ListItem",
+        position: breadcrumbCategory.length + 2,
+        name: page.title,
+        item: `https://smartreviewinsights.com/${page.slug}`,
+      },
+    ],
+  };
 
   const structuredData = firstOffer
     ? {
@@ -253,6 +307,28 @@ export default async function CatchAllPage({ params }: Props) {
         dateModified: page.updatedAt.toISOString(),
         mainEntityOfPage: `https://smartreviewinsights.com/${page.slug}`,
       };
+  const articleSchema = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: page.title,
+    description: page.excerpt ?? page.title,
+    datePublished: page.publishedAt?.toISOString(),
+    dateModified: page.updatedAt.toISOString(),
+    mainEntityOfPage: `https://smartreviewinsights.com/${page.slug}`,
+    image: galleryImages[0] ? [galleryImages[0]] : undefined,
+    author: {
+      "@type": "Organization",
+      name: "SmartReviewInsights",
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "SmartReviewInsights",
+      logo: {
+        "@type": "ImageObject",
+        url: "https://smartreviewinsights.com/smartreviewinsights-logo.png",
+      },
+    },
+  };
 
   return (
     <main>
@@ -260,6 +336,14 @@ export default async function CatchAllPage({ params }: Props) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
         />
         <nav className="breadcrumb" aria-label="Breadcrumb">
           <Link href="/">Home</Link>
@@ -351,7 +435,7 @@ export default async function CatchAllPage({ params }: Props) {
                     <Link key={item.id} href={`/${item.slug}`} className="card offer-card related-item" style={{ textDecoration: "none", color: "inherit" }}>
                       <div className={`related-row${item.heroImageUrl ? "" : " no-thumb"}`}>
                         {item.heroImageUrl ? (
-                          <img src={item.heroImageUrl} alt={item.title} className="related-thumb" loading="lazy" />
+                          <Image src={item.heroImageUrl} alt={item.title} className="related-thumb" width={160} height={160} loading="lazy" />
                         ) : null}
                         <div className="related-content">
                           <strong className="offer-title">{item.title}</strong>

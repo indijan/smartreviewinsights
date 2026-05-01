@@ -1,6 +1,7 @@
 import { categoryLabel } from "@/lib/category-taxonomy";
 import type { OfferSource } from "@/lib/offer-source";
 import { prisma } from "@/lib/prisma";
+import { buildDealsExcerpt, buildDealsTitle } from "@/lib/seo-copy";
 
 export type AutoPageResult = {
   processed: number;
@@ -94,7 +95,8 @@ export async function generateOfferLandingPagesForSource(opts: {
     processed += 1;
 
     const slug = slugForSourceCategory(opts.source, niche.categoryPath);
-    const title = `${categoryLabel(niche.categoryPath)} ${sourceLabel(opts.source)} Deals`;
+    const title = buildDealsTitle(niche.categoryPath, sourceLabel(opts.source));
+    const excerpt = buildDealsExcerpt(niche.categoryPath, sourceLabel(opts.source));
     const contentMd = buildContent(
       opts.source,
       niche.categoryPath,
@@ -108,7 +110,7 @@ export async function generateOfferLandingPagesForSource(opts: {
           where: { id: existing.id },
           data: {
             title,
-            excerpt: `Updated ${sourceLabel(opts.source)} picks for ${categoryLabel(niche.categoryPath)}.`,
+            excerpt,
             contentMd,
             type: "LANDING",
             status: opts.publishMode === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
@@ -120,7 +122,7 @@ export async function generateOfferLandingPagesForSource(opts: {
           data: {
             slug,
             title,
-            excerpt: `Updated ${sourceLabel(opts.source)} picks for ${categoryLabel(niche.categoryPath)}.`,
+            excerpt,
             contentMd,
             type: "LANDING",
             status: opts.publishMode === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
