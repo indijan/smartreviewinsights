@@ -27,6 +27,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <Link className="chip" href="/admin/analytics">
               Analytics
             </Link>
+            <Link className="chip" href="/admin/traffic-lab">
+              Traffic Lab
+            </Link>
             {loggedIn ? (
               <form action="/admin/auth/logout" method="post">
                 <button className="chip" type="submit">

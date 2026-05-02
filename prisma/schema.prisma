@@ -24,7 +24,9 @@ model Page {
 
   tags   PageTag[]
   clicks ClickEvent[]
+  impressionEvents ImpressionEvent[]
   clickAggregates ClickAggregate[]
+  trafficPlacements TrafficPlacement[]
 
   @@index([status, publishedAt])
   @@index([status, publishedAt, updatedAt])
@@ -69,6 +71,7 @@ model Offer {
   clicks       ClickEvent[]
   ingests      OfferIngestEvent[]
   clickAggregates ClickAggregate[]
+  trafficOffers TrafficOffer[]
 
   @@index([source, lastUpdated])
   @@index([partnerId])
@@ -91,19 +94,42 @@ model ClickEvent {
   id        String   @id @default(cuid())
   pageId    String?
   offerId   String?
+  trafficOfferId String?
   source    OfferSource
   ref       String?
   userAgent String?
   ipHash    String?
+  sessionId String?
+  pagePath  String?
+  nicheSlug String?
+  funnelId  String?
+  placementId String?
+  ctaVariantId String?
+  outboundUrl String?
+  utmSource String?
+  utmMedium String?
+  utmCampaign String?
+  utmContent String?
+  deviceType String?
+  referrerUrl String?
+  country String?
   createdAt DateTime @default(now())
 
   page  Page?  @relation(fields: [pageId], references: [id])
   offer Offer? @relation(fields: [offerId], references: [id])
+  trafficOffer TrafficOffer? @relation(fields: [trafficOfferId], references: [id])
+  funnel TrafficFunnel? @relation(fields: [funnelId], references: [id])
+  placement TrafficPlacement? @relation(fields: [placementId], references: [id])
+  ctaVariant TrafficCtaVariant? @relation(fields: [ctaVariantId], references: [id])
 
   @@index([createdAt])
   @@index([pageId, createdAt])
   @@index([offerId, createdAt])
   @@index([source, createdAt])
+  @@index([trafficOfferId, createdAt])
+  @@index([funnelId, createdAt])
+  @@index([placementId, createdAt])
+  @@index([utmCampaign, createdAt])
 }
 
 model ClickAggregate {
@@ -313,4 +339,186 @@ model AutomationCache {
   updatedAt DateTime @updatedAt
 
   @@index([expiresAt])
+}
+
+model TrafficNiche {
+  id                   String   @id @default(cuid())
+  name                 String
+  slug                 String   @unique
+  description          String?
+  status               String   @default("draft")
+  primaryMonetization  String   @default("mixed")
+  riskLevel            String   @default("low")
+  targetGeography      String?
+  notes                String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  funnels              TrafficFunnel[]
+  offers               TrafficOffer[]
+  campaignCosts        TrafficCampaignCost[]
+  revenueImports       TrafficRevenueImport[]
+
+  @@index([status, updatedAt])
+}
+
+model TrafficFunnel {
+  id             String   @id @default(cuid())
+  nicheId        String
+  niche          TrafficNiche @relation(fields: [nicheId], references: [id])
+  name           String
+  slug           String   @unique
+  entryPageId    String?
+  deepPageIds    Json?
+  quizPageId     String?
+  comparisonPageIds Json?
+  status         String   @default("draft")
+  targetCpc      Decimal? @db.Decimal(12, 4)
+  targetRpm      Decimal? @db.Decimal(12, 4)
+  targetEpv      Decimal? @db.Decimal(12, 4)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  clickEvents    ClickEvent[]
+
+  @@index([nicheId, status, updatedAt])
+}
+
+model TrafficOffer {
+  id                 String   @id @default(cuid())
+  nicheId            String?
+  niche              TrafficNiche? @relation(fields: [nicheId], references: [id])
+  existingOfferId    String?
+  existingOffer      Offer?   @relation(fields: [existingOfferId], references: [id])
+  name               String
+  slug               String   @unique
+  offerType          String
+  destinationUrl     String
+  trackingUrl        String?
+  network            String?
+  commissionType     String?
+  estimatedEpc       Decimal? @db.Decimal(12, 4)
+  geo                String?
+  device             String?
+  status             String   @default("active")
+  disclosureRequired Boolean  @default(true)
+  notes              String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  placements         TrafficPlacementOnOffer[]
+  clickEvents        ClickEvent[]
+  impressionEvents   ImpressionEvent[]
+
+  @@index([nicheId, status, updatedAt])
+  @@index([existingOfferId])
+}
+
+model TrafficPlacement {
+  id                       String   @id @default(cuid())
+  pageId                   String?
+  page                     Page?    @relation(fields: [pageId], references: [id])
+  name                     String
+  slug                     String   @unique
+  placementType            String
+  weight                   Int      @default(100)
+  maxImpressionsPerSession Int?
+  status                   String   @default("active")
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  offers                   TrafficPlacementOnOffer[]
+  clickEvents              ClickEvent[]
+  impressionEvents         ImpressionEvent[]
+
+  @@index([pageId, status, updatedAt])
+}
+
+model TrafficPlacementOnOffer {
+  placementId    String
+  offerId        String
+  placement      TrafficPlacement @relation(fields: [placementId], references: [id])
+  offer          TrafficOffer @relation(fields: [offerId], references: [id])
+
+  @@id([placementId, offerId])
+}
+
+model TrafficCtaVariant {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  ctaText     String
+  ctaSubtext  String?
+  buttonText  String
+  angle       String
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  clickEvents ClickEvent[]
+  impressionEvents ImpressionEvent[]
+
+  @@index([status, updatedAt])
+}
+
+model ImpressionEvent {
+  id           String   @id @default(cuid())
+  pageId       String?
+  trafficOfferId String?
+  placementId  String?
+  ctaVariantId String?
+  sessionId    String?
+  pagePath     String?
+  nicheSlug    String?
+  viewportSeen Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  page         Page?             @relation(fields: [pageId], references: [id])
+  trafficOffer TrafficOffer?     @relation(fields: [trafficOfferId], references: [id])
+  placement    TrafficPlacement? @relation(fields: [placementId], references: [id])
+  ctaVariant   TrafficCtaVariant? @relation(fields: [ctaVariantId], references: [id])
+
+  @@index([createdAt])
+  @@index([pageId, createdAt])
+  @@index([trafficOfferId, createdAt])
+  @@index([placementId, createdAt])
+  @@index([ctaVariantId, createdAt])
+}
+
+model TrafficCampaignCost {
+  id           String   @id @default(cuid())
+  nicheId      String?
+  niche        TrafficNiche? @relation(fields: [nicheId], references: [id])
+  date         DateTime
+  source       String
+  campaignName String
+  utmCampaign  String?
+  spend        Decimal  @db.Decimal(12, 2)
+  clicks       Int      @default(0)
+  cpc          Decimal? @db.Decimal(12, 4)
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([date, source])
+  @@index([utmCampaign])
+}
+
+model TrafficRevenueImport {
+  id          String   @id @default(cuid())
+  nicheId     String?
+  niche       TrafficNiche? @relation(fields: [nicheId], references: [id])
+  date        DateTime
+  source      String
+  pagePath    String?
+  revenue     Decimal  @db.Decimal(12, 2)
+  clicks      Int      @default(0)
+  impressions Int      @default(0)
+  rpm         Decimal? @db.Decimal(12, 4)
+  epc         Decimal? @db.Decimal(12, 4)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([date, source])
+  @@index([pagePath])
 }

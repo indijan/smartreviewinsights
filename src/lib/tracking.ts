@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 import type { NextRequest } from "next/server";
+import { randomUUID } from "node:crypto";
+import { normalizeSlug } from "@/lib/slug";
 
 const BOT_USER_AGENT_PATTERN =
   /bot|crawler|spider|curl|wget|headless|preview|facebookexternalhit|slurp|bingpreview|httpclient/i;
@@ -41,4 +43,21 @@ export function buildClickBucketKey(args: {
   offerId?: string | null;
 }): string {
   return [args.day, args.source, args.pageId ?? "-", args.offerId ?? "-"].join(":");
+}
+
+export function getDeviceType(userAgent: string) {
+  const ua = String(userAgent || "").toLowerCase();
+  if (/tablet|ipad/.test(ua)) return "tablet";
+  if (/mobile|iphone|android/.test(ua)) return "mobile";
+  return "desktop";
+}
+
+export function getOrCreateSessionId(request: NextRequest) {
+  const existing = request.cookies.get("sri_sid")?.value;
+  return existing || randomUUID();
+}
+
+export function normalizeOptionalSlug(input: string | null | undefined) {
+  const value = normalizeSlug(input ?? "");
+  return value || "";
 }
