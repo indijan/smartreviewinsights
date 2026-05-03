@@ -9,6 +9,7 @@ import { normalizeContentForRender } from "@/lib/content";
 import { rankOffers } from "@/lib/offers-ranking";
 import { getContextualOffersForPage, getRelatedReviewPages, resolvePublishedPageBySlug } from "@/lib/pages";
 import { joinSlug } from "@/lib/slug";
+import { isTrafficExitSlug, trafficPresentationForSlug } from "@/lib/traffic-tests";
 
 export const revalidate = 3600;
 
@@ -255,6 +256,8 @@ export default async function CatchAllPage({ params }: Props) {
   });
   const categoryPath = page.product?.category || page.slug.split("/").slice(0, -1).join("/");
   const categoryParts = categoryPath.split("/").filter((x: string) => Boolean(x));
+  const trafficPresentation = trafficPresentationForSlug(page.slug);
+  const isExitPage = isTrafficExitSlug(page.slug);
   const breadcrumbCategory = categoryParts.map((part: string, idx: number) => ({
     label: titleCaseSlugPart(part),
     href: `/category/${categoryParts.slice(0, idx + 1).join("/")}`,
@@ -357,11 +360,29 @@ export default async function CatchAllPage({ params }: Props) {
           <span className="current">{page.title}</span>
         </nav>
 
+        {trafficPresentation ? (
+          <section className="card" style={{ marginBottom: "1rem", background: "linear-gradient(135deg, #f7f3ea 0%, #fff 100%)" }}>
+            <p className="meta">{trafficPresentation.eyebrow}</p>
+            <h2 style={{ marginTop: "0.2rem", marginBottom: "0.35rem" }}>{trafficPresentation.stage}</h2>
+            <p className="page-sub">{trafficPresentation.blurb}</p>
+          </section>
+        ) : null}
+
         <h1 className="page-title">{page.title}</h1>
         {page.excerpt ? (
           <div className="tldr">
             <p>{page.excerpt}</p>
           </div>
+        ) : null}
+
+        {isExitPage ? (
+          <section className="card" style={{ marginBottom: "1rem", borderColor: "#d4b272", background: "linear-gradient(135deg, #fff8ef 0%, #fff 100%)" }}>
+            <p className="meta">Fastest Path Out</p>
+            <h2 style={{ marginTop: "0.2rem" }}>This page is built to create the next click.</h2>
+            <p className="page-sub">
+              Keep the copy tight, keep the choice simple, and move the visitor toward the outbound action as fast as possible.
+            </p>
+          </section>
         ) : null}
 
         {galleryImages.length > 0 ? <ImageGallery images={galleryImages} altBase={page.title} /> : null}
@@ -427,7 +448,7 @@ export default async function CatchAllPage({ params }: Props) {
                 </div>
               </section>
             ) : null}
-            {related.length ? (
+            {!isExitPage && related.length ? (
               <section className="offer-section">
                 <h3 className="page-title" style={{ fontSize: "1.12rem" }}>Related Reviews</h3>
                 <div className="offer-grid">
@@ -451,7 +472,7 @@ export default async function CatchAllPage({ params }: Props) {
 
           </div>
 
-          {renderOffers.length ? (
+          {!isExitPage && renderOffers.length ? (
             <StickySidebar className="offer-sticky-wrap">
               <aside className="offer-sidebar card">
               <h3 className="page-title" style={{ fontSize: "1.05rem" }}>Live Product Offers</h3>

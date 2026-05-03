@@ -310,6 +310,32 @@ export async function getLatestPages(page = 1, limit = 50, query?: string | null
   };
 }
 
+export async function getLatestTrafficTestPages(limit = 6) {
+  const safeLimit = Math.max(1, Math.min(24, limit));
+  return prisma.page.findMany({
+    where: {
+      status: "PUBLISHED",
+      publishedAt: { not: null },
+      OR: [
+        { slug: { startsWith: "insights/" } },
+        { slug: { startsWith: "guides/" } },
+        { slug: { startsWith: "next/" } },
+      ],
+    },
+    orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+    take: safeLimit,
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      excerpt: true,
+      type: true,
+      publishedAt: true,
+      heroImageUrl: true,
+    },
+  }) as Promise<SearchListItem[]>;
+}
+
 export async function getRelatedReviewPages(args: {
   pageId: string;
   category?: string | null;

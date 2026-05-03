@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { categoryLeafNodes, CATEGORY_TAXONOMY } from "@/lib/category-taxonomy";
 import { expandSearchQueryWithAi, rankSearchCandidatesWithAi } from "@/lib/intelligent-search";
-import { getLatestPages, searchPublishedPages, type SearchListItem } from "@/lib/pages";
+import { getLatestPages, getLatestTrafficTestPages, searchPublishedPages, type SearchListItem } from "@/lib/pages";
 
 export const revalidate = 3600;
 
@@ -59,7 +59,10 @@ export default async function HomePage({ searchParams }: Props) {
   const aiMode = ai === "1";
   const aiExpanded = aiMode ? await expandSearchQueryWithAi(rawQuery, null) : { effectiveQuery: rawQuery, aiUsed: false };
   const effectiveQuery = aiExpanded.effectiveQuery;
-  const result = await getLatestPages(Number.isFinite(currentPage) ? currentPage : 1, 50);
+  const [result, trafficTests] = await Promise.all([
+    getLatestPages(Number.isFinite(currentPage) ? currentPage : 1, 50),
+    getLatestTrafficTestPages(6),
+  ]);
   let pages = result.items as SearchListItem[];
   let topResults: SearchListItem[] = [];
   let otherResults: SearchListItem[] = [];
@@ -138,6 +141,36 @@ export default async function HomePage({ searchParams }: Props) {
               ))}
             </div>
           </section>
+
+          {trafficTests.length ? (
+            <section className="card">
+              <h2>Latest Attention Tests</h2>
+              <p className="page-sub">
+                Fresh traffic-arbitrage style pages generated for cheap-click capture, attention stretch, and click exits.
+              </p>
+              <p style={{ marginTop: "0.6rem" }}>
+                <Link className="chip" href="/insights">Open All Attention Tests</Link>
+              </p>
+              <div className="grid-list" style={{ marginTop: "0.8rem" }}>
+                {trafficTests.map((entry) => (
+                  <article key={entry.id} className="card article-link-card">
+                    <div className={`article-card-row${entry.heroImageUrl ? "" : " no-thumb"}`}>
+                      {entry.heroImageUrl ? (
+                        <Link href={`/${entry.slug}`} className="article-card-thumb-link" aria-label={entry.title}>
+                          <Image src={entry.heroImageUrl} alt={entry.title} className="article-card-thumb" width={320} height={320} loading="lazy" />
+                        </Link>
+                      ) : null}
+                      <div className="article-card-content">
+                        <Link href={`/${entry.slug}`}><h2>{entry.title}</h2></Link>
+                        {entry.excerpt ? <p className="page-sub">{entry.excerpt}</p> : null}
+                        <p className="meta">{entry.slug.startsWith("insights/") ? "Entry test" : entry.slug.startsWith("guides/") ? "Bridge test" : "Exit test"}</p>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
         </>
       ) : null}
 

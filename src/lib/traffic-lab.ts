@@ -130,6 +130,19 @@ export async function getTrafficLabDashboard(days = 30) {
   const epv = totalClicks > 0 ? totalRevenue / totalClicks : 0;
   const profit = totalRevenue - totalCost;
   const outboundCtr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+  const inboundCpc = totalClicks > 0 ? totalCost / totalClicks : 0;
+  const marginPercent = totalCost > 0 ? (profit / totalCost) * 100 : 0;
+  const hasMeaningfulVolume = totalImpressions >= 100 && totalClicks >= 10;
+  const decision =
+    totalCost === 0 && totalRevenue === 0
+      ? "NO_DATA"
+      : !hasMeaningfulVolume
+        ? "KEEP_TESTING"
+      : profit < 0 || (totalCost > 0 && totalRevenue < totalCost) || (inboundCpc > epv && totalCost > 0)
+        ? "KILL"
+        : outboundCtr >= 3 && profit > 0 && epv > inboundCpc
+          ? "SCALE"
+          : "KEEP_TESTING";
 
   return {
     totalClicks,
@@ -139,6 +152,10 @@ export async function getTrafficLabDashboard(days = 30) {
     epv,
     profit,
     outboundCtr,
+    inboundCpc,
+    marginPercent,
+    hasMeaningfulVolume,
+    decision,
     topTrafficOffers,
     topTrafficPages,
     placementCtrRows,
