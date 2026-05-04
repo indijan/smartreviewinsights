@@ -5,9 +5,11 @@ import { notFound, redirect } from "next/navigation";
 import { marked } from "marked";
 import ImageGallery from "@/components/image-gallery";
 import StickySidebar from "@/components/sticky-sidebar";
+import TrafficOfferCard from "@/components/traffic-offer-card";
+import TrafficStickyMobileCta from "@/components/traffic-sticky-mobile-cta";
 import { normalizeContentForRender } from "@/lib/content";
 import { rankOffers } from "@/lib/offers-ranking";
-import { getContextualOffersForPage, getRelatedReviewPages, resolvePublishedPageBySlug } from "@/lib/pages";
+import { getActiveTrafficPlacementsForPage, getContextualOffersForPage, getRelatedReviewPages, resolvePublishedPageBySlug } from "@/lib/pages";
 import { joinSlug } from "@/lib/slug";
 import { isTrafficExitSlug, trafficPresentationForSlug } from "@/lib/traffic-tests";
 
@@ -237,6 +239,10 @@ export default async function CatchAllPage({ params }: Props) {
       '<a $1href=$2$3$2$4 target="_blank" rel="noopener noreferrer nofollow">'
     );
   const contextualOffers = await getContextualOffersForPage(page);
+  const trafficPlacements = await getActiveTrafficPlacementsForPage(page.id);
+  const midPlacement = trafficPlacements.find((item) => item.placementType === "inline_card" || item.placementType === "related_offer_box");
+  const bottomPlacement = trafficPlacements.find((item) => item.placementType === "quiz_result_cta" || item.placementType === "comparison_table");
+  const stickyPlacement = trafficPlacements.find((item) => item.placementType === "sticky_bottom_mobile");
   const candidateOffers = page.type === "REVIEW" ? (page.product?.offers ?? []) : (page.product?.offers?.length ? page.product.offers : contextualOffers);
   const validOffers = candidateOffers.filter((o: { source: string; affiliateUrl: string }) => isLikelyProductOfferUrl(o.source, o.affiliateUrl));
   const dedupedOffers = Array.from(new Map(validOffers.map((o: { source: string; affiliateUrl: string }) => [`${o.source}::${o.affiliateUrl}`, o])).values());
@@ -390,6 +396,17 @@ export default async function CatchAllPage({ params }: Props) {
         <div className="article-layout">
           <div>
             <div className="prose prose-desktop" dangerouslySetInnerHTML={{ __html: html }} />
+            {midPlacement?.offers[0]?.offer ? (
+              <TrafficOfferCard
+                offerSlug={midPlacement.offers[0].offer.slug}
+                title={midPlacement.offers[0].offer.name}
+                description="Recommended next step for visitors already engaged with this page."
+                buttonText="Open Next Step"
+                placementSlug={midPlacement.slug}
+                pageSlug={page.slug}
+                disclosureRequired={midPlacement.offers[0].offer.disclosureRequired}
+              />
+            ) : null}
             <div className="prose prose-mobile">
               {mobileSplit ? (
                 <>
@@ -469,6 +486,19 @@ export default async function CatchAllPage({ params }: Props) {
                 </div>
               </section>
             ) : null}
+            {bottomPlacement?.offers[0]?.offer ? (
+              <section style={{ marginTop: "1rem" }}>
+                <TrafficOfferCard
+                  offerSlug={bottomPlacement.offers[0].offer.slug}
+                  title={bottomPlacement.offers[0].offer.name}
+                  description="If the article answered the question, this is the cleanest next click."
+                  buttonText="See Next Option"
+                  placementSlug={bottomPlacement.slug}
+                  pageSlug={page.slug}
+                  disclosureRequired={bottomPlacement.offers[0].offer.disclosureRequired}
+                />
+              </section>
+            ) : null}
 
           </div>
 
@@ -502,6 +532,15 @@ export default async function CatchAllPage({ params }: Props) {
 
         <p className="disclosure">This page may include affiliate links.</p>
       </article>
+
+      {stickyPlacement?.offers[0]?.offer ? (
+        <TrafficStickyMobileCta
+          offerSlug={stickyPlacement.offers[0].offer.slug}
+          label="Open next step"
+          placementSlug={stickyPlacement.slug}
+          pageSlug={page.slug}
+        />
+      ) : null}
 
       <p style={{ marginTop: "1rem" }}>
         <Link className="btn" href="/">

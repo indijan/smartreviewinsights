@@ -62,6 +62,39 @@ const PAGE_WITH_OFFERS_SELECT = {
   },
 } satisfies Prisma.PageSelect;
 
+export async function getActiveTrafficPlacementsForPage(pageId: string) {
+  return prisma.trafficPlacement.findMany({
+    where: {
+      pageId,
+      status: "active",
+      offers: {
+        some: {},
+      },
+    },
+    orderBy: [{ weight: "desc" }, { updatedAt: "desc" }],
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      placementType: true,
+      weight: true,
+      offers: {
+        select: {
+          offer: {
+            select: {
+              id: true,
+              slug: true,
+              name: true,
+              destinationUrl: true,
+              disclosureRequired: true,
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
 const getPageBySlugCached = cache(async (slug: string) =>
   prisma.page.findUnique({
     where: { slug },
